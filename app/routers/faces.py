@@ -1,36 +1,32 @@
 """
-faces.py (Versão Estabilizada)
---------
+faces.py (Versão Supabase Corrigida com Depends)
+---------------------------------------------
 Router responsável pelo reconhecimento facial e registro de chamada.
+Utiliza injeção de dependência para o db_manager.
 """
 
-from fastapi import APIRouter, UploadFile, HTTPException, Depends, Form
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, UploadFile, HTTPException, Form, Depends # Adicionado Depends
 from app.services.face_service import get_face_encoding, compare_encodings
-from app.models.db_session import get_db
-from app.models.response import ResultadoReconhecimento, ResultadoSimilaridade
-from app.models import db_models
-from app.services.db_service import Database, Settings
+# Alterado: Importamos a função de dependência e a classe SupabaseDB, NÃO a instância global db_manager
+from app.services.db_service import get_db_manager, SupabaseDB 
+from app.config import settings
+from app.models.response import ResultadoReconhecimento, ResultadoSimilaridade # Se você ainda usa Pydantic
 import json
 import numpy as np 
 from typing import List
 
-# Inicializa o Database Service (assumindo que já está definido)
-settings = Settings.from_env()
-db_manager = Database(settings)
-
-# Definindo o limite de similaridade para considerar o rosto reconhecido
-SIMILARITY_THRESHOLD = 70.0 # Exemplo: 70% de similaridade
+# Configurações globais
+SIMILARITY_THRESHOLD = settings.SIMILARITY_THRESHOLD
 
 router = APIRouter(prefix="/faces", tags=["faces"])
 
 
-@router.post("/reconhecer", response_model=ResultadoReconhecimento)
+@router.post("/reconhecer") # Removido response_model para simplificar o retorno JSON do Supabase
 async def reconhecer(
     foto: UploadFile, 
     session_tag: str = Form("Default Session"),
-    db: Session = Depends(get_db) # <-- Usando a sessão
-) -> ResultadoReconhecimento:
+    db_manager: SupabaseDB = Depends(get_db_manager) # NOVO: Injeção de dependência
+):
     """
     Reconhece o aluno em uma foto e registra a chamada se a confiança for alta.
     """
@@ -38,84 +34,70 @@ async def reconhecer(
     if encoding is None or (isinstance(encoding, np.ndarray) and encoding.size == 0):
         raise HTTPException(status_code=400, detail="Nenhum rosto detectado na imagem enviada")
 
-    # 1. Carregar todos os embeddings do banco de dados (usando db_service)
-    # db_manager.load_all_embeddings retorna objetos FaceEmbedding
+    # 1. Carregar todos os embeddings do Supabase (JSON + nome do aluno)
     face_embeddings_data = db_manager.load_all_embeddings()
     
     if not face_embeddings_data:
-        return ResultadoReconhecimento(
-            mensagem="Nenhum rosto cadastrado para comparação",
-            mais_provavel=None,
-            todos=[]
-        )
+        return {"mensagem": "Nenhum rosto cadastrado para comparação", "mais_provavel": None}
 
-    # Dicionário para armazenar o MELHOR resultado de similaridade por aluno (ID)
     melhores_resultados_por_aluno = {}
     
     # 2. Comparar com todos os rostos cadastrados
     for face_data in face_embeddings_data:
         
-        student = face_data.student
-        if not student:
-            continue 
+        student_data = face_data.get('students')
+        if not student_data:
+            continue # Pular se não houver dados do aluno (problema de RLS ou FK)
         
-        student_id = student.id
+        student_id = face_data['student_id']
         
-        # --- NOVO BLOCO TRY/EXCEPT ---
+        # Desserialização JSON: Transforma a string/JSONB de volta em numpy array
         try:
-            # 1. Desserialização JSON e conversão para numpy array
-            emb_list = json.loads(face_data.vector)
+            # Assumimos que o campo 'vector' é uma string JSON válida
+            emb_list = json.loads(face_data['vector'])
             emb = np.array(emb_list)
-            
-            # 2. Comparação (usando 'emb' que acabou de ser definido)
-            sim = compare_encodings(emb, encoding) 
-            
-        except json.JSONDecodeError:
-            # Se o vetor JSON estiver corrompido no DB, pulamos este embedding
+        except Exception:
             continue 
-        except Exception as e:
-            # Captura qualquer outro erro (como falha na conversão para np.array) e pula
-            print(f"Erro inesperado ao processar embedding {face_data.id}: {e}")
-            continue
-
+        
+        sim = compare_encodings(emb, encoding)
+        
         # Armazena apenas se for a maior similaridade encontrada para este aluno
         if student_id not in melhores_resultados_por_aluno or sim > melhores_resultados_por_aluno[student_id]['similaridade']:
             
             melhores_resultados_por_aluno[student_id] = {
-                "id": student.id,
-                "nome": student.nome,
+                "id": student_id,
+                "nome": student_data['nome'],
                 "similaridade": sim,
-                "check_professor": student.is_professor
+                "check_professor": student_data['is_professor']
             }
 
-    # 3. Converter o dicionário de melhores resultados para a lista ResultadoSimilaridade
-    resultados: List[ResultadoSimilaridade] = [
-        ResultadoSimilaridade(**data)
-        for data in melhores_resultados_por_aluno.values()
-    ]
+    # 3. Encontrar o resultado mais provável
+    resultados = list(melhores_resultados_por_aluno.values())
     
     if not resultados:
-        # Retorna erro claro se o loop não encontrou nenhum match válido (e todos foram pulados)
-        return ResultadoReconhecimento(mensagem="Erro ao processar embeddings: Nenhuma correspondência válida encontrada após a comparação.", mais_provavel=None, todos=[])
+        return {"mensagem": "Nenhuma correspondência válida encontrada após a comparação.", "mais_provavel": None}
 
-    # 4. Encontrar o resultado mais provável
-    resultados_ordenados = sorted(resultados, key=lambda x: x.similaridade, reverse=True)
+    resultados_ordenados = sorted(resultados, key=lambda x: x['similaridade'], reverse=True)
     mais_provavel = resultados_ordenados[0]
     
-    # 5. REGISTRAR A CHAMADA (Lógica Principal)
-    if mais_provavel.similaridade >= SIMILARITY_THRESHOLD:
+    # 4. REGISTRAR A CHAMADA
+    mensagem_chamada = "Nenhuma chamada registrada (similaridade abaixo do limiar)."
+    
+    if mais_provavel['similaridade'] >= SIMILARITY_THRESHOLD:
         
         registro = db_manager.create_attendance(
-            student_id=mais_provavel.id,
+            student_id=mais_provavel['id'],
             session_tag=session_tag,
-            confidence=mais_provavel.similaridade
+            confidence=mais_provavel['similaridade']
         )
         
-        mais_provavel.mensagem_chamada = f"Chamada registrada ({registro.id}) às {registro.timestamp.strftime('%H:%M:%S')}"
+        if registro:
+             mensagem_chamada = f"Chamada registrada ({registro['id']}) em {registro['timestamp']}."
         
         
-    return ResultadoReconhecimento(
-        mensagem="Reconhecimento concluído",
-        mais_provavel=mais_provavel,
-        todos=resultados_ordenados 
-    )
+    return {
+        "mensagem": "Reconhecimento concluído",
+        "mais_provavel": mais_provavel,
+        "mensagem_chamada": mensagem_chamada,
+        "todos": resultados_ordenados 
+    }
