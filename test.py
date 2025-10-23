@@ -5,14 +5,13 @@ import numpy as np
 
 # Caminho para a pasta de rostos conhecidos
 KNOWN_FACES_DIR = "data/known_faces"
-TOLERANCE = 0.6  # Limiar de similaridade (quanto menor, mais rígido)
-MODEL = "cnn"  # Modelo de detecção (hog ou cnn)
+TOLERANCE = 0.55  # Limiar de similaridade (quanto menor, mais rígido)
+MODEL = "hog"  # Modelo de detecção (hog ou cnn)
 
 # Carregar rostos conhecidos
 known_faces = []
 known_names = []
 
-print("Carregando rostos conhecidos...")
 for name in os.listdir(KNOWN_FACES_DIR):
     person_dir = os.path.join(KNOWN_FACES_DIR, name)
     if not os.path.isdir(person_dir):
@@ -20,7 +19,7 @@ for name in os.listdir(KNOWN_FACES_DIR):
     for filename in os.listdir(person_dir):
         filepath = os.path.join(person_dir, filename)
         if filename.startswith('.'):
-            continue  
+            continue
         image = face_recognition.load_image_file(filepath)
         encodings = face_recognition.face_encodings(image)
         if encodings:
@@ -38,7 +37,7 @@ while True:
         continue
 
     # Reduzir tamanho para acelerar processamento
-    small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
     # Detectar rostos
@@ -63,15 +62,15 @@ while True:
             similarity_percent = 0
 
         # Ajustar coordenadas para frame original
-        top *= 2
-        right *= 2
-        bottom *= 2
-        left *= 2
+        top *= 4
+        right *= 4
+        bottom *= 4
+        left *= 4
 
         # Desenhar quadrado e texto
-        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 4)
         cv2.putText(frame, f"{name} ({similarity_percent}%)", (left, top - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 4)
 
     cv2.imshow("Reconhecimento Facial", frame)
 

@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import selectinload 
 from app.models.db_models import Base, Student, FaceEmbedding, AttendanceRecord
 
 @dataclass
@@ -43,12 +44,12 @@ class Database:
         self.SessionLocal = sessionmaker(self.engine, expire_on_commit=False, future=True)
 
     # --- Students
-    def create_student(self, external_id: str, name: str) -> Student:
+    def create_student(self, external_id: str, nome: str) -> Student: # Corrigi o nome do parâmetro da função
         with self.SessionLocal() as s, s.begin():
-            st = Student(external_id=external_id, name=name)
+            st = Student(external_id=external_id, nome=nome) # 👈 Corrigi o nome do argumento do construtor
             s.add(st)
             s.flush()
-            return st
+        return st
 
     def get_student(self, student_id: int) -> Optional[Student]:
         with self.SessionLocal() as s:
@@ -63,24 +64,38 @@ class Database:
             return list(s.execute(select(Student)).scalars())
 
     # --- Embeddings
-    def add_embeddings(self, student_id: int, vectors: List[List[float]]) -> int:
+    def add_embedding(self, student_id: int, vector_json: str) -> int: # A função agora espera uma string
+        """ Adiciona um único embedding facial (vetor JSON string) """
         with self.SessionLocal() as s, s.begin():
-            for v in vectors:
-                s.add(FaceEmbedding(student_id=student_id, vector=[float(x) for x in v]))
-            return len(vectors)
+        # Salva a string JSON diretamente na coluna 'vector'
+            s.add(FaceEmbedding(student_id=student_id, vector=vector_json))
+            return 1 # Retorna 1 embedding adicionado
 
     def load_all_embeddings(self) -> List[FaceEmbedding]:
+        """ Carrega todos os embeddings, incluindo os dados do aluno (JOIN). """
         with self.SessionLocal() as s:
-            return list(s.execute(select(FaceEmbedding)).scalars())
+            # Usa selectinload para carregar os detalhes do aluno junto com o embedding
+            stmt = select(FaceEmbedding).options(selectinload(FaceEmbedding.student))
+            # Retorna lista de objetos FaceEmbedding, cada um com .student preenchido
+            return list(s.execute(stmt).scalars())
 
     # --- Attendance
     def create_attendance(self, student_id: int, session_tag: str, confidence: float) -> AttendanceRecord:
         with self.SessionLocal() as s, s.begin():
             rec = AttendanceRecord(student_id=student_id, session_tag=session_tag, confidence=confidence)
             s.add(rec)
-            s.flush()
+            s.flush() # Garante que o ID seja gerado ANTES do commit
+            s.commit() # Força o commit dentro do Context Manager
+            s.refresh(rec) # Garante que o objeto tenha o ID e seja recarregado
             return rec
 
     def list_attendance_for_student(self, student_id: int) -> List[AttendanceRecord]:
         with self.SessionLocal() as s:
             return list(s.execute(select(AttendanceRecord).where(AttendanceRecord.student_id == student_id)).scalars())
+    
+    def list_all_attendance(self) -> List[AttendanceRecord]:
+        """ Retorna todos os registros de chamada, incluindo os dados do aluno. """
+        with self.SessionLocal() as s:
+            # Carrega AttendanceRecord e faz JOIN para incluir os dados do Student
+            stmt = select(AttendanceRecord).options(selectinload(AttendanceRecord.student))
+            return list(s.execute(stmt).scalars())
