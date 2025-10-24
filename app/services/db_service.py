@@ -7,7 +7,7 @@ alunos, faces e registro de chamadas.
 from postgrest import APIResponse
 from supabase import create_client, Client
 from app.config import settings, Settings
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # Classe que gerencia a comunicação com o Supabase
 class SupabaseDB:
@@ -25,14 +25,18 @@ class SupabaseDB:
         """Alias para list_students para compatibilidade com o router."""
         return self.list_students()
 
+    def get_student_by_id(self, student_id: str) -> Optional[Dict[str, Any]]:
+        """Busca um aluno específico pelo ID."""
+        response: APIResponse = self.client.table('students').select('*').eq('id', student_id).single().execute()
+        return response.data if response.data else None
+    
     def create_student(self, nome: str, is_professor: bool) -> Dict[str, Any]:
         """
         Cria um registro de aluno/professor no Supabase.
         Aceita 'nome' e 'is_professor' (alinhado com o router).
         """
-        # Mapeia 'nome' para a coluna 'name' (ou 'nome', se for o caso na sua DB)
         student_data = {
-            "nome": nome, 
+            "name": nome, 
             "is_professor": is_professor
         }
         response: APIResponse = self.client.table('students').insert(student_data).execute()
@@ -49,7 +53,6 @@ class SupabaseDB:
         """
         Retorna todos os registros da tabela 'attendance_records' como lista de dicionários.
         """
-        # Assume que o nome da coluna do aluno para o JOIN é 'nome'
         response: APIResponse = self.client.table('attendance_records').select('*, students(nome)').execute()
         return response.data
 
@@ -69,7 +72,6 @@ class SupabaseDB:
         Recupera todos os embeddings de faces e o student_id associado.
         CORRIGIDO: Referência à tabela 'face_embeddings' e coluna 'vector'.
         """
-        # COLUNA AJUSTADA DE 'embedding' PARA 'vector'
         response: APIResponse = self.client.table('face_embeddings').select('student_id, vector').execute()
         return response.data
 
@@ -80,7 +82,7 @@ class SupabaseDB:
         """
         face_data = {
             "student_id": student_id,
-            "vector": vector_json  # COLUNA AJUSTADA DE 'embedding' PARA 'vector'
+            "vector": vector_json
         }
         response: APIResponse = self.client.table('face_embeddings').insert(face_data).execute()
         return len(response.data) > 0

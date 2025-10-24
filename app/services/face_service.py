@@ -1,43 +1,93 @@
 """
-face_service.py
----------------
-Funções auxiliares para processamento facial usando a biblioteca 
-face_recognition.
-
-Funcionalidades:
-- get_face_encoding: retorna o embedding do rosto a partir de uma imagem
-- compare_encodings: calcula a similaridade entre dois embeddings
+app/services/face_service.py
+----------------------------
+Serviços para processamento de imagens e reconhecimento facial.
+Depende das bibliotecas numpy, io e face_recognition.
 """
-import face_recognition
 import numpy as np
+import face_recognition
 from fastapi import UploadFile
-from PIL import Image
+from typing import Optional, List, Dict, Tuple
+import io
 
+# Defina a tolerância de distância facial (quanto menor, mais rigoroso)
+FACE_RECOGNITION_TOLERANCE = 0.6
 
-def get_face_encoding(file: UploadFile):
+def get_face_encoding(file: UploadFile) -> Optional[np.ndarray]:
     """
-    Retorna o embedding facial de uma imagem.
-    Se não encontrar rosto, retorna None.
+    Carrega o arquivo de imagem, encontra um rosto e retorna seu encoding (vetor).
+    Retorna None se nenhum rosto for detectado.
     """
-    img = Image.open(file.file)
+    # 1. Ler o conteúdo do arquivo
+    image_bytes = file.file.read()
 
-    image_np = np.array(img)
+    # 2. Carregar a imagem a partir dos bytes
+    image = face_recognition.load_image_file(io.BytesIO(image_bytes))
 
-    encodings = face_recognition.face_encodings(image_np)
-    if len(encodings) > 0:
-        return encodings[0]  # retorna o primeiro rosto detectado
+    # 3. Encontrar todos os encodings na imagem (pegamos apenas o primeiro)
+    face_encodings = face_recognition.face_encodings(image)
+
+    if face_encodings:
+        return face_encodings[0]
     return None
 
+def recognize_face(
+    unknown_encoding: np.ndarray, 
+    known_faces_data: List[Dict[str, any]]
+) -> Optional[Tuple[str, float]]:
+    """
+    Compara o encoding de um rosto desconhecido com todos os rostos conhecidos.
 
-def compare_encodings(enc1, enc2):
+    Args:
+        unknown_encoding: O vetor numpy do rosto a ser identificado.
+        known_faces_data: Uma lista de dicionários, cada um com 'student_id' e 'vector'
+                          (o vetor de rosto salvo como string JSON, que precisamos converter).
+
+    Returns:
+        Uma tupla (student_id, confidence) do rosto mais próximo, ou None.
     """
-    Calcula a similaridade entre dois embeddings faciais.
+    if not known_faces_data:
+        return None
+
+    # 1. Preparar os dados conhecidos para a comparação
+    known_encodings = []
+    known_ids = []
     
-    Retorna:
-    - Similaridade em porcentagem (float)
-    """
-    e1 = np.array(enc1)
-    e2 = np.array(enc2)
-    distancia = np.linalg.norm(e1 - e2)
-    similarity = 1 / (1 + distancia)
-    return round(similarity * 100, 2)
+    for face_record in known_faces_data:
+        try:
+            # Converte a string JSON (que é uma lista Python) de volta para um array numpy
+            # O .tolist() foi usado na rota de cadastro
+            vector_list = face_record['vector']
+            if isinstance(vector_list, str):
+                # Se o Supabase não converter automaticamente, tentamos o json.loads
+                import json
+                vector_list = json.loads(vector_list)
+            
+            # Converte a lista de volta para um array numpy
+            known_encodings.append(np.array(vector_list))
+            known_ids.append(face_record['student_id'])
+            
+        except Exception as e:
+            # Ignora registros mal formatados, mas imprime o erro para debug
+            print(f"Erro ao processar vetor facial do ID {face_record.get('student_id')}: {e}")
+            continue
+
+    if not known_encodings:
+        return None
+        
+    # 2. Comparar o rosto desconhecido com todos os conhecidos
+    # Retorna uma lista de distâncias. Quanto menor, mais parecido.
+    face_distances = face_recognition.face_distance(known_encodings, unknown_encoding)
+
+    # 3. Encontrar o rosto com a menor distância (mais parecido)
+    best_match_index = np.argmin(face_distances)
+    min_distance = face_distances[best_match_index]
+    
+    # 4. Verificar se a distância está dentro do limite de tolerância
+    if min_distance <= FACE_RECOGNITION_TOLERANCE:
+        # A "confiança" é a inversa da distância (1.0 - distance), mas para fins práticos,
+        # vamos retornar a distância real (menor é melhor) e o ID.
+        matched_id = known_ids[best_match_index]
+        return matched_id, float(min_distance)
+    
+    return None # Nenhuma correspondência encontrada dentro da tolerância

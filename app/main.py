@@ -11,20 +11,19 @@ Responsável por:
 """
 
 from fastapi import FastAPI
-from app.routers import students, faces
-from app.config import settings # Novo import para configurações
-
-# Removido: toda a importação e lógica de db_session.py e db_models.py
+# Importe o novo roteador de faces
+from app.routers import students, faces 
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    description="API de Reconhecimento Facial com Supabase e Lovable"
+    title="API de Chamada Facial",
+    description="Sistema de reconhecimento facial e registro de presença.",
+    version="1.0.0",
 )
 
-# Adicionando Rotas
+# Incluir o roteador de alunos (students)
 app.include_router(students.router)
-app.include_router(faces.router)
+# Incluir o novo roteador de faces
+app.include_router(faces.router) 
 
 @app.get("/")
 def read_root():
