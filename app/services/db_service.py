@@ -36,7 +36,7 @@ class SupabaseDB:
         Aceita 'nome' e 'is_professor' (alinhado com o router).
         """
         student_data = {
-            "name": nome, 
+            "nome": nome, 
             "is_professor": is_professor
         }
         response: APIResponse = self.client.table('students').insert(student_data).execute()
@@ -64,7 +64,11 @@ class SupabaseDB:
         """Atualiza o campo 'check_professor' para True."""
         response: APIResponse = self.client.table('attendance_records').update({"check_professor": True}).eq('id', attendance_id).execute()
         return len(response.data) > 0
-
+    
+    def get_attendance_record_by_id(self, attendance_id: str) -> Optional[Dict[str, Any]]:
+        """Busca um registro de chamada específico pelo ID."""
+        response: APIResponse = self.client.table('attendance_records').select('*').eq('id', attendance_id).single().execute()
+        return response.data if response.data else None
     # --- Métodos de Faces (Reconhecimento Facial) ---
 
     def get_all_faces(self) -> List[Dict[str, Any]]:
@@ -86,7 +90,14 @@ class SupabaseDB:
         }
         response: APIResponse = self.client.table('face_embeddings').insert(face_data).execute()
         return len(response.data) > 0
+    
+    def get_student_by_name(self, nome: str) -> Optional[Dict[str, Any]]:
+        """Busca um aluno específico pelo nome."""
+        # Usa .limit(1) para pegar o primeiro resultado encontrado
+        response: APIResponse = self.client.table('students').select('*').eq('nome', nome).limit(1).execute()
+        return response.data[0] if response.data else None
 
+    
 
 # --- Instância Global e Dependência FastAPI ---
 
