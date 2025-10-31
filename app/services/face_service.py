@@ -83,11 +83,14 @@ def recognize_face(
     best_match_index = np.argmin(face_distances)
     min_distance = face_distances[best_match_index]
     
+   
     # 4. Verificar se a distância está dentro do limite de tolerância
     if min_distance <= FACE_RECOGNITION_TOLERANCE:
-        # A "confiança" é a inversa da distância (1.0 - distance), mas para fins práticos,
-        # vamos retornar a distância real (menor é melhor) e o ID.
+        # A similaridade é 1.0 - distância. Retornamos a similaridade (maior é melhor).
         matched_id = known_ids[best_match_index]
-        return matched_id, float(min_distance)
+        confidence = 1.0 - min_distance # Calcula a similaridade (0 a 1)
+    
+        # Retorna a similaridade em porcentagem (0 a 100)
+        return matched_id, float(confidence * 100) 
     
     return None # Nenhuma correspondência encontrada dentro da tolerância
