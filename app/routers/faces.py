@@ -14,7 +14,7 @@ router = APIRouter(prefix="/faces", tags=["Faces"])
 # Dependência do SupabaseDB
 SupabaseDep = Depends(get_db_manager)
 
-@router.post("/validate", status_code=status.HTTP_200_OK)
+@router.post("/reconhecer", status_code=status.HTTP_200_OK)
 async def validate_face(
     foto: UploadFile = File(...),
     db_manager: SupabaseDB = SupabaseDep
@@ -66,7 +66,7 @@ async def validate_face(
                 "message": "Rosto reconhecido, mas aluno não encontrado no registro principal."
             }
 
-        student_name = student_record.get('name', 'Nome Desconhecido') # Usa 'name' ou 'nome' conforme sua DB
+        student_name = student_record.get('nome', 'Nome Desconhecido') # Usa 'name' ou 'nome' conforme sua DB
 
         # 5. Registrar a chamada (Attendance)
         try:

@@ -2,31 +2,38 @@
 main.py
 --------
 Arquivo principal da aplicação FastAPI.
-
-Responsável por:
-- Criar a instância FastAPI
-- Configurar middlewares (CORS)
-- Incluir os routers de students e faces
-- Executar o servidor (uvicorn) no modo debug/reload
 """
 
 from fastapi import FastAPI
-# Importe o novo roteador de faces
-from app.routers import students, faces 
+from fastapi.middleware.cors import CORSMiddleware
+from app.routers import students, faces
+from app.models import db_models
+from app.models.db_session import Base, engine
+Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title="API de Chamada Facial",
-    description="Sistema de reconhecimento facial e registro de presença.",
-    version="1.0.0",
-)
+app = FastAPI(title="Sistema de Chamada Automática")
 
-# Incluir o roteador de alunos (students)
+# Lista de origens permitidas.
+# Adicione a URL completa do seu frontend Lovable que aparece no erro de CORS.
+origins = [
+    "https://438e3a3d-8d30-40ad-ab75-20655a7bf554.lovableproject.com", # Domínio do Lovable
+    "http://localhost",
+    "http://localhost:8080",
+    "*" # Curinga para cobrir o ngrok e outros ambientes de teste
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+ )
+
 app.include_router(students.router)
-# Incluir o novo roteador de faces
-app.include_router(faces.router) 
+app.include_router(faces.router)
 
-@app.get("/")
-def read_root():
-    return {"message": "API de Chamada Facial (FastAPI + Supabase) está online!"}
-
-# Remoção da lógica if __name__ == "__main__" se você roda com uvicorn app.main:app
+if __name__ == "__main__":
+    import uvicorn
+    # Corrigido para evitar importação circular e usar host 0.0.0.0
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
