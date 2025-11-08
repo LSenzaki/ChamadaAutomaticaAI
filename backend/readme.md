@@ -5,7 +5,30 @@ O objetivo é conseguir integrar um sistema automático de reconhecimento dos al
 registro de presença dos alunos.
 
 BIBLIOTECAS
-Face Recognition (chosen after comprehensive comparison - see tests/comparison_results/)
+**Sistema Híbrido**: face_recognition + DeepFace
+(Combina velocidade do face_recognition com precisão de validação do DeepFace)
+
+---
+
+## 🚀 Sistema Híbrido de Reconhecimento (NOVO!)
+
+O sistema agora utiliza uma **estratégia híbrida inteligente** que combina o melhor dos dois mundos:
+
+### ⚡ Estratégia SMART (Padrão)
+1. **Face Recognition primeiro** (rápido - 0.09s)
+2. **Alta confiança (>60%)**: Aceita imediatamente
+3. **Confiança média (40-60%)**: Valida com DeepFace
+4. **Baixa confiança (<40%)**: DeepFace como autoridade
+5. **Não encontrou**: DeepFace como fallback
+
+**Resultado:** ~0.3s em média (vs 0.09s só FR ou 1.7s só DF)
+
+### 📊 Modos Disponíveis
+- **smart** (Recomendado): Velocidade + precisão balanceada
+- **always_both**: Máxima precisão, sempre usa ambos
+- **fallback**: Máxima velocidade, DF apenas em falhas
+
+**📖 [Documentação Completa do Sistema Híbrido](HYBRID_SYSTEM.md)**
 
 ---
 
@@ -16,6 +39,7 @@ A comprehensive comparison was conducted between **face_recognition** and **Deep
 ### 🏆 Winner: Face Recognition
 - **Accuracy: 77.6%** vs DeepFace 54.1%
 - **F1 Score: 0.813** vs DeepFace 0.477
+- **Speed: ~0.09s** vs DeepFace ~1.7s
 - Better balance between precision and recall
 
 **📂 Comparison Structure:**
@@ -44,7 +68,9 @@ project_root/app/routers/students.py          # Rotas CRUD de estudantes e regis
 
 project_root/app/services/                    # Regras de negócio
 project_root/app/services/__init__.py
+project_root/app/services/hybrid_face_service.py  # 🆕 Sistema híbrido FR + DF
 project_root/app/services/face_service.py     # Funções que utilizam face_recognition
+project_root/app/services/deepface_service.py # 🆕 Funções que utilizam DeepFace
 project_root/app/services/db_service.py       # Operações com o banco de dados
 
 project_root/app/models/                      # Modelos do banco de dados
