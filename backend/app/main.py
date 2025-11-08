@@ -6,7 +6,7 @@ Arquivo principal da aplicação FastAPI.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import students, faces
+from app.routers import students, faces, comparison
 from app.models import db_models
 from app.models.db_session import Base, engine
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,7 @@ app.add_middleware(
 
 app.include_router(students.router)
 app.include_router(faces.router)
+app.include_router(comparison.router)
 
 if __name__ == "__main__":
     import uvicorn
