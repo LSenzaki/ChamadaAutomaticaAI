@@ -54,3 +54,5 @@ Desktop.ini
 *.iml
 *.ipr
 *.iws
+
+.env
