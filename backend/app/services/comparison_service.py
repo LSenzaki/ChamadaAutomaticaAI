@@ -96,25 +96,44 @@ class ModelComparison:
         data = self.results[model_name]
         y_true = np.array(data["ground_truth"])
         y_pred = np.array(data["predictions"])
+        confidence_scores = np.array(data["confidence_scores"])
         
-        # Remover predições onde houve erro (opcional)
+        # Identificar predições válidas e falhas
         valid_indices = y_pred != -1
+        valid_predictions = int(np.sum(valid_indices))
+        failed_predictions = int(np.sum(~valid_indices))
+        
+        # Confiança média apenas de predições válidas (que retornaram resultado)
+        valid_confidences = confidence_scores[valid_indices]
+        avg_confidence_valid = float(np.mean(valid_confidences)) if len(valid_confidences) > 0 else 0.0
+        
+        # Confiança média de TODAS as predições (falhas = 0% confiança)
+        avg_confidence_all = float(np.mean(confidence_scores)) if len(confidence_scores) > 0 else 0.0
         
         metrics = {
             "total_predictions": len(y_true),
-            "valid_predictions": int(np.sum(valid_indices)),
-            "failed_predictions": int(np.sum(~valid_indices)),
-            "avg_confidence": float(np.mean(data["confidence_scores"])) if data["confidence_scores"] else 0.0,
+            "valid_predictions": valid_predictions,
+            "failed_predictions": failed_predictions,
+            "avg_confidence_all": avg_confidence_all,  # Média incluindo falhas
+            "avg_confidence_valid": avg_confidence_valid,  # Média apenas de predições válidas
             "avg_processing_time": float(np.mean(data["processing_times"])) if data["processing_times"] else 0.0,
             "total_processing_time": float(np.sum(data["processing_times"])) if data["processing_times"] else 0.0,
         }
         
-        if np.sum(valid_indices) > 0:
+        # ACCURACY REAL: incluindo falhas como erros
+        # Falhas contam como predições incorretas
+        correct_predictions = int(np.sum(y_true[valid_indices] == y_pred[valid_indices]))
+        metrics["accuracy"] = float(correct_predictions / len(y_true)) if len(y_true) > 0 else 0.0
+        metrics["correct_predictions"] = correct_predictions
+        metrics["incorrect_predictions"] = len(y_true) - correct_predictions
+        
+        # Métricas apenas para predições válidas (para comparação com metodologia antiga)
+        if valid_predictions > 0:
             y_true_valid = y_true[valid_indices]
             y_pred_valid = y_pred[valid_indices]
             
-            # Accuracy
-            metrics["accuracy"] = float(accuracy_score(y_true_valid, y_pred_valid))
+            # Accuracy apenas de predições válidas
+            metrics["accuracy_valid_only"] = float(accuracy_score(y_true_valid, y_pred_valid))
             
             # Precision, Recall, F1 (Macro)
             metrics["precision_macro"] = float(precision_score(y_true_valid, y_pred_valid, average='macro', zero_division=0))
@@ -126,7 +145,7 @@ class ModelComparison:
             metrics["recall_weighted"] = float(recall_score(y_true_valid, y_pred_valid, average='weighted', zero_division=0))
             metrics["f1_weighted"] = float(f1_score(y_true_valid, y_pred_valid, average='weighted', zero_division=0))
             
-            # Cohen's Kappa
+            # Cohen's Kappa (apenas válidos)
             metrics["cohen_kappa"] = float(cohen_kappa_score(y_true_valid, y_pred_valid))
             
             # Confusion Matrix
@@ -138,18 +157,19 @@ class ModelComparison:
             report = classification_report(y_true_valid, y_pred_valid, labels=unique_labels, output_dict=True, zero_division=0)
             metrics["classification_report"] = report
             
-            # True Positives, False Positives, etc.
+            # True Positives, False Positives (apenas para válidos)
             metrics["true_positives"] = int(np.sum(y_true_valid == y_pred_valid))
             metrics["false_positives"] = int(np.sum((y_true_valid != y_pred_valid) & (y_pred_valid != -1)))
-            metrics["false_negatives"] = int(np.sum((y_true_valid != y_pred_valid) & (y_pred_valid == -1)))
         else:
             # Sem predições válidas
-            metrics["accuracy"] = 0.0
+            metrics["accuracy_valid_only"] = 0.0
             metrics["precision_macro"] = 0.0
             metrics["recall_macro"] = 0.0
             metrics["f1_macro"] = 0.0
             metrics["cohen_kappa"] = 0.0
             metrics["confusion_matrix"] = []
+            metrics["true_positives"] = 0
+            metrics["false_positives"] = 0
         
         return metrics
     
