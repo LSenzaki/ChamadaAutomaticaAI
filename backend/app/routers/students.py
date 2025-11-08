@@ -15,8 +15,8 @@ from sqlalchemy.orm import Session
 from app.services.face_service import get_face_encoding
 from app.models.db_session import get_db
 from app.models.response import ResultadoReconhecimento, ResultadoSimilaridade
+from app.models.db_models import Student, FaceEmbedding
 import json
-from app.models import db_models
 
 
 router = APIRouter(prefix="/students", tags=["students"])
@@ -42,13 +42,22 @@ async def cadastrar(nome: str = Form(...), foto: UploadFile = None,
     if encoding is None:
         raise HTTPException(status_code=400, detail="Nenhum rosto detectado")
 
-    aluno = db_models.Pessoa(
+    # Criar aluno
+    aluno = Student(
         nome=nome,
-        embedding=json.dumps(encoding.tolist())
+        is_professor=False
     )
     db.add(aluno)
     db.commit()
     db.refresh(aluno)
+
+    # Adicionar embedding
+    embedding = FaceEmbedding(
+        student_id=aluno.id,
+        vector=json.dumps(encoding.tolist())
+    )
+    db.add(embedding)
+    db.commit()
 
     return {"mensagem": f"{nome} cadastrado com sucesso!", "id": aluno.id}
 
@@ -58,12 +67,12 @@ def listar_alunos(db: Session = Depends(get_db)):
     """
     Retorna a lista de todos os alunos cadastrados.
     """
-    alunos = db.query(db_models.Pessoa).all()
+    alunos = db.query(Student).all()
     return [
         {
             "id": aluno.id,
             "nome": aluno.nome,
-            "check_professor": aluno.check_professor
+            "check_professor": aluno.is_professor
         }
         for aluno in alunos
     ]
@@ -73,7 +82,7 @@ def remover_aluno(aluno_id: int, db: Session = Depends(get_db)):
     """
     Remove um aluno do banco pelo ID.
     """
-    aluno = db.query(db_models.Pessoa).filter(db_models.Pessoa.id == aluno_id).first()
+    aluno = db.query(Student).filter(Student.id == aluno_id).first()
     if not aluno:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
     
@@ -85,7 +94,7 @@ def remover_aluno(aluno_id: int, db: Session = Depends(get_db)):
 @router.put("/validar/{aluno_id}")
 def validar_aluno(aluno_id: int, validado: bool = True, db: Session = Depends(get_db)):
     """
-    Valida ou invalida um aluno (atualiza check_professor).
+    Valida ou invalida um aluno (atualiza is_professor).
     
     Parâmetros:
     - aluno_id: int → ID do aluno
@@ -95,16 +104,16 @@ def validar_aluno(aluno_id: int, validado: bool = True, db: Session = Depends(ge
     Retorna:
     - Mensagem de sucesso
     """
-    aluno = db.query(db_models.Pessoa).filter(db_models.Pessoa.id == aluno_id).first()
+    aluno = db.query(Student).filter(Student.id == aluno_id).first()
     if not aluno:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
     
-    aluno.check_professor = validado
+    aluno.is_professor = validado
     db.commit()
     db.refresh(aluno)
     
     return {
         "mensagem": f"Aluno '{aluno.nome}' {'validado' if validado else 'invalidado'} com sucesso",
         "id": aluno.id,
-        "check_professor": aluno.check_professor
+        "check_professor": aluno.is_professor
     }

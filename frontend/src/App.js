@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Users, UserCheck, Upload, Trash2, CheckCircle, XCircle, Video, VideoOff } from 'lucide-react';
 
-const API_URL = 'http://127.0.0.1:8000';
-
+const API_URL = 'http://localhost:8001';
+0
 // Componente: Tela do Aluno (Reconhecimento em Stream)
 const AlunoScreen = () => {
   const videoRef = useRef(null);
