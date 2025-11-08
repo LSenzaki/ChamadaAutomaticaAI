@@ -1,7 +1,7 @@
 # app/models/response.py (Exemplo de como deve ficar)
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any
 
 class ResultadoSimilaridade(BaseModel):
     id: int
@@ -16,3 +16,8 @@ class ResultadoReconhecimento(BaseModel):
     mensagem: str
     mais_provavel: Optional[ResultadoSimilaridade]
     todos: List[ResultadoSimilaridade]
+
+class ApiResponse(BaseModel):
+    sucesso: bool
+    mensagem: str
+    dados: Optional[Any] = None

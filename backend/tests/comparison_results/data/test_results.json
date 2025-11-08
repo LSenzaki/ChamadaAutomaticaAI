@@ -1,0 +1,85 @@
+{
+  "test_info": {
+    "date": "2025-11-08",
+    "test_type": "blind_celebrity_test",
+    "total_images": 429,
+    "known_celebrities": 30,
+    "unknown_celebrities": 15,
+    "training_dataset": "test_dataset",
+    "testing_dataset": "celebrity_dataset",
+    "image_size": "300x300"
+  },
+  "face_recognition": {
+    "metrics": {
+      "accuracy": 0.776,
+      "precision": 0.920,
+      "recall": 0.727,
+      "sensitivity": 0.727,
+      "specificity": 0.874,
+      "f1_score": 0.813
+    },
+    "confusion_matrix": {
+      "true_positives": 208,
+      "false_negatives": 78,
+      "true_negatives": 125,
+      "false_positives": 18,
+      "total_known": 286,
+      "total_unknown": 143
+    },
+    "false_negatives_breakdown": {
+      "not_recognized": 69,
+      "wrong_person": 9
+    },
+    "performance": {
+      "avg_confidence": 27.5,
+      "avg_time_seconds": 0.3051,
+      "avg_time_ms": 305.1
+    }
+  },
+  "deepface": {
+    "model": "Facenet512",
+    "metrics": {
+      "accuracy": 0.541,
+      "precision": 0.989,
+      "recall": 0.315,
+      "sensitivity": 0.315,
+      "specificity": 0.993,
+      "f1_score": 0.477
+    },
+    "confusion_matrix": {
+      "true_positives": 90,
+      "false_negatives": 196,
+      "true_negatives": 142,
+      "false_positives": 1,
+      "total_known": 286,
+      "total_unknown": 143
+    },
+    "false_negatives_breakdown": {
+      "not_recognized": 194,
+      "wrong_person": 2
+    },
+    "performance": {
+      "avg_confidence": 16.8,
+      "avg_time_seconds": 0.2184,
+      "avg_time_ms": 218.4
+    }
+  },
+  "comparison": {
+    "accuracy_winner": "face_recognition",
+    "precision_winner": "deepface",
+    "recall_winner": "face_recognition",
+    "f1_score_winner": "face_recognition",
+    "specificity_winner": "deepface",
+    "speed_winner": "deepface",
+    "overall_winner": "face_recognition",
+    "key_findings": [
+      "Face Recognition achieved 77.6% accuracy vs DeepFace's 54.1%",
+      "DeepFace is more conservative with only 1 false positive vs 18 for Face Recognition",
+      "Face Recognition has better recall (72.7%) - found more known faces",
+      "DeepFace missed 68.5% of known faces (196 out of 286)",
+      "DeepFace is faster (218ms vs 305ms per image)",
+      "Face Recognition provides better balance between precision and recall"
+    ],
+    "recommendation": "Face Recognition is recommended for production use due to significantly better accuracy and balanced performance"
+  }
+}
