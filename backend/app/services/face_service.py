@@ -34,17 +34,17 @@ def get_face_encoding(file: UploadFile) -> Optional[np.ndarray]:
 def recognize_face(
     unknown_encoding: np.ndarray, 
     known_faces_data: List[Dict[str, any]]
-) -> Optional[Tuple[str, float]]:
+) -> Optional[Tuple[int, float]]:
     """
     Compara o encoding de um rosto desconhecido com todos os rostos conhecidos.
 
     Args:
         unknown_encoding: O vetor numpy do rosto a ser identificado.
-        known_faces_data: Uma lista de dicionários, cada um com 'student_id' e 'vector'
-                          (o vetor de rosto salvo como string JSON, que precisamos converter).
+        known_faces_data: Uma lista de dicionários, cada um com 'aluno_id' e 'embedding'
+                          (o vetor de rosto salvo como bytes pickle).
 
     Returns:
-        Uma tupla (student_id, confidence) do rosto mais próximo, ou None.
+        Uma tupla (aluno_id, confidence) do rosto mais próximo, ou None.
     """
     if not known_faces_data:
         return None
@@ -53,23 +53,28 @@ def recognize_face(
     known_encodings = []
     known_ids = []
     
+    import pickle
+    
     for face_record in known_faces_data:
         try:
-            # Converte a string JSON (que é uma lista Python) de volta para um array numpy
-            # O .tolist() foi usado na rota de cadastro
-            vector_list = face_record['vector']
-            if isinstance(vector_list, str):
-                # Se o Supabase não converter automaticamente, tentamos o json.loads
-                import json
-                vector_list = json.loads(vector_list)
+            # Desserializar o embedding de bytes pickle para numpy array
+            embedding_bytes = face_record['embedding']
+            if isinstance(embedding_bytes, bytes):
+                # Pickle deserialização
+                embedding_array = pickle.loads(embedding_bytes)
+            elif isinstance(embedding_bytes, memoryview):
+                # Se vier como memoryview, converter para bytes primeiro
+                embedding_array = pickle.loads(bytes(embedding_bytes))
+            else:
+                # Fallback: tentar converter diretamente
+                embedding_array = np.array(embedding_bytes)
             
-            # Converte a lista de volta para um array numpy
-            known_encodings.append(np.array(vector_list))
-            known_ids.append(face_record['student_id'])
+            known_encodings.append(embedding_array)
+            known_ids.append(face_record['aluno_id'])
             
         except Exception as e:
             # Ignora registros mal formatados, mas imprime o erro para debug
-            print(f"Erro ao processar vetor facial do ID {face_record.get('student_id')}: {e}")
+            print(f"Erro ao processar embedding do aluno ID {face_record.get('aluno_id')}: {e}")
             continue
 
     if not known_encodings:

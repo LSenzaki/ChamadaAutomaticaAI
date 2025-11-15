@@ -55,26 +55,26 @@ async def validate_face(
         )
 
     # 3. Verificar se houve match
-    if hybrid_result.student_id and hybrid_result.confidence is not None:
-        student_id = hybrid_result.student_id
+    if hybrid_result.aluno_id and hybrid_result.confidence is not None:
+        aluno_id = hybrid_result.aluno_id
         confidence = hybrid_result.confidence
         
         # 4. Buscar informações do aluno
-        student_record = db_manager.get_student_by_id(student_id)
+        aluno_record = db_manager.get_aluno_by_id(aluno_id)
         
-        if not student_record:
+        if not aluno_record:
             return {
                 "status": "failure",
                 "message": "Rosto reconhecido, mas aluno não encontrado no registro principal.",
                 "recognition_details": hybrid_result.to_dict()
             }
 
-        student_name = student_record.get('nome', 'Nome Desconhecido')
+        aluno_nome = aluno_record.get('nome', 'Nome Desconhecido')
 
         # 5. Registrar a chamada
         try:
             attendance_data = {
-                "student_id": student_id,
+                "aluno_id": aluno_id,
                 "confidence": round(confidence, 4),
             }
             db_manager.register_attendance(attendance_data)
@@ -82,9 +82,9 @@ async def validate_face(
             # Sucesso
             return {
                 "status": "success",
-                "message": f"Chamada registrada para {student_name}!",
-                "student_id": student_id,
-                "nome": student_name,
+                "message": f"Chamada registrada para {aluno_nome}!",
+                "aluno_id": aluno_id,
+                "nome": aluno_nome,
                 "confidence": round(confidence, 2),
                 "recognition_details": hybrid_result.to_dict()
             }
@@ -92,7 +92,7 @@ async def validate_face(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Rosto reconhecido ({student_name}), mas falha ao registrar chamada: {e}"
+                detail=f"Rosto reconhecido ({aluno_nome}), mas falha ao registrar chamada: {e}"
             )
     else:
         # Nenhuma correspondência
@@ -140,10 +140,10 @@ async def test_recognition(
     
     # Adicionar informações do estudante se encontrado
     for mode, result_data in results.items():
-        if result_data.get("student_id"):
-            student = db_manager.get_student_by_id(result_data["student_id"])
-            if student:
-                result_data["student_name"] = student.get("nome", "Desconhecido")
+        if result_data.get("aluno_id"):
+            aluno = db_manager.get_aluno_by_id(result_data["aluno_id"])
+            if aluno:
+                result_data["aluno_nome"] = aluno.get("nome", "Desconhecido")
     
     return {
         "status": "success",

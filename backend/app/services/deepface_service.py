@@ -122,18 +122,18 @@ def recognize_face_deepface(
     known_faces_data: List[Dict[str, any]],
     model_name: str = DEEPFACE_MODEL,
     distance_metric: str = DEEPFACE_DISTANCE_METRIC
-) -> Optional[Tuple[str, float, float]]:
+) -> Optional[Tuple[int, float, float]]:
     """
     Compara o embedding de um rosto desconhecido com todos os rostos conhecidos usando DeepFace.
     
     Args:
         unknown_encoding: O embedding do rosto a ser identificado
-        known_faces_data: Lista de dicionários com 'student_id' e 'vector'
+        known_faces_data: Lista de dicionários com 'aluno_id' e 'embedding'
         model_name: Modelo usado (para determinar threshold)
         distance_metric: Métrica de distância
     
     Returns:
-        Tupla (student_id, confidence, distance) do melhor match, ou None
+        Tupla (aluno_id, confidence, distance) do melhor match, ou None
     """
     if not known_faces_data:
         return None
@@ -142,18 +142,24 @@ def recognize_face_deepface(
     known_encodings = []
     known_ids = []
     
+    import pickle
+    
     for face_record in known_faces_data:
         try:
-            vector_list = face_record['vector']
-            if isinstance(vector_list, str):
-                import json
-                vector_list = json.loads(vector_list)
+            # Desserializar o embedding de bytes pickle para numpy array
+            embedding_bytes = face_record['embedding']
+            if isinstance(embedding_bytes, bytes):
+                embedding_array = pickle.loads(embedding_bytes)
+            elif isinstance(embedding_bytes, memoryview):
+                embedding_array = pickle.loads(bytes(embedding_bytes))
+            else:
+                embedding_array = np.array(embedding_bytes)
             
-            known_encodings.append(np.array(vector_list))
-            known_ids.append(face_record['student_id'])
+            known_encodings.append(embedding_array)
+            known_ids.append(face_record['aluno_id'])
             
         except Exception as e:
-            print(f"Erro ao processar vetor facial do ID {face_record.get('student_id')}: {e}")
+            print(f"Erro ao processar embedding do aluno ID {face_record.get('aluno_id')}: {e}")
             continue
     
     if not known_encodings:
