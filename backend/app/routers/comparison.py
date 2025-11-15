@@ -151,7 +151,7 @@ async def batch_test(
     deepface_model: str = "Facenet512",
     deepface_detector: str = "opencv",
     deepface_metric: str = "cosine",
-    images_per_student: Optional[int] = None
+    images_per_aluno: Optional[int] = None
 ):
     """
     Executa teste em lote usando um dataset estruturado.
@@ -162,12 +162,12 @@ async def batch_test(
         deepface_model: Modelo DeepFace
         deepface_detector: Detector DeepFace
         deepface_metric: Métrica de distância
-        images_per_student: Limitar número de imagens por aluno
+        images_per_aluno: Limitar número de imagens por aluno
     """
     try:
         # Carregar dataset
         dataset = TestDataset(dataset_path)
-        test_pairs = dataset.get_test_pairs(images_per_student)
+        test_pairs = dataset.get_test_pairs(images_per_aluno)
         
         if not test_pairs:
             raise HTTPException(status_code=404, detail="Nenhuma imagem encontrada no dataset")
@@ -193,7 +193,7 @@ async def batch_test(
             "errors": 0
         }
         
-        for img_path, student_name, student_id in test_pairs:
+        for img_path, aluno_nome, aluno_id in test_pairs:
             try:
                 # Criar UploadFile mock a partir do caminho
                 with open(img_path, 'rb') as f:
@@ -225,7 +225,7 @@ async def batch_test(
                 comparison.add_prediction(
                     "face_recognition",
                     fr_pred_id,
-                    student_id,
+                    aluno_id,
                     fr_confidence,
                     fr_time,
                     fr_error
@@ -262,7 +262,7 @@ async def batch_test(
                 comparison.add_prediction(
                     "deepface",
                     df_pred_id,
-                    student_id,
+                    aluno_id,
                     df_confidence,
                     df_time,
                     df_error
