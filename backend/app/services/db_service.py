@@ -171,9 +171,12 @@ class SupabaseDB:
         """Create a new student"""
         aluno_data = {
             "nome": nome,
-            "turma_id": turma_id,
             "check_professor": check_professor
         }
+        # Only include turma_id if it's provided (not None)
+        if turma_id is not None:
+            aluno_data["turma_id"] = turma_id
+        
         response = self.client.table('alunos').insert(
             aluno_data
         ).execute()
@@ -243,14 +246,64 @@ class SupabaseDB:
         response = query.order('data_hora', desc=True).execute()
         return format_records_timestamps(response.data)
     
+    def get_student_last_attendance_today(
+        self, aluno_id: int
+    ) -> Optional[Dict[str, Any]]:
+        """Get student's last attendance record for today"""
+        from datetime import date
+        today = date.today().isoformat()
+        
+        response = self.client.table('presencas').select(
+            '*'
+        ).eq('aluno_id', aluno_id).gte(
+            'data_hora', today
+        ).order('data_hora', desc=True).limit(1).execute()
+        
+        return response.data[0] if response.data else None
+    
+    def is_student_in_class(self, aluno_id: int) -> bool:
+        """Check if student is currently in class (last record is entrada)"""
+        last_attendance = self.get_student_last_attendance_today(aluno_id)
+        if not last_attendance:
+            print(f"DEBUG: Aluno {aluno_id} - "
+                  f"Nenhum registro hoje, retornando False")
+            return False
+        tipo = last_attendance.get('tipo_registro')
+        data_hora = last_attendance.get('data_hora')
+        print(f"DEBUG: Aluno {aluno_id} - Último registro: {tipo} "
+              f"às {data_hora}")
+        return tipo == 'entrada'
+    
     def create_presenca(
-        self, aluno_id: int, turma_id: int, confianca: float = None
+        self, aluno_id: int, turma_id: int, confianca: float = None,
+        tipo_registro: str = None
     ) -> Dict[str, Any]:
-        """Register new attendance"""
+        """
+        Register new attendance with smart entry/exit detection.
+        
+        If tipo_registro is not specified, automatically determines:
+        - If student's last record today is 'entrada', registers 'saida'
+        - Otherwise, registers 'entrada'
+        """
+        # Smart detection if tipo_registro not specified
+        if tipo_registro is None:
+            last_attendance = self.get_student_last_attendance_today(aluno_id)
+            if last_attendance and \
+               last_attendance.get('tipo_registro') == 'entrada':
+                tipo_registro = 'saida'
+                print(f"DEBUG: Registrando SAÍDA para aluno {aluno_id}")
+            else:
+                tipo_registro = 'entrada'
+                print(f"DEBUG: Registrando ENTRADA para aluno {aluno_id}")
+        else:
+            print(f"DEBUG: Tipo já definido: {tipo_registro} "
+                  f"para aluno {aluno_id}")
+        
         presenca_data = {
             "aluno_id": aluno_id,
             "turma_id": turma_id,
-            "confianca": confianca
+            "confianca": confianca,
+            "tipo_registro": tipo_registro
         }
         response = self.client.table('presencas').insert(
             presenca_data

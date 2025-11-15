@@ -54,20 +54,38 @@ def recognize_face(
     known_ids = []
     
     import pickle
+    import base64
     
     for face_record in known_faces_data:
         try:
             # Desserializar o embedding de bytes pickle para numpy array
-            embedding_bytes = face_record['embedding']
-            if isinstance(embedding_bytes, bytes):
-                # Pickle deserialização
+            embedding_data = face_record['embedding']
+            
+            # Check if it's a hex-encoded string from Supabase BYTEA
+            if isinstance(embedding_data, str) and embedding_data.startswith('\\x'):
+                # Remove \x prefix and decode hex to get original base64
+                hex_str = embedding_data.replace('\\x', '')
+                embedding_bytes = bytes.fromhex(hex_str)
+                # The result is the base64 string as bytes, decode to str
+                embedding_b64_str = embedding_bytes.decode('utf-8')
+                # Now decode base64 to get pickle bytes
+                pickle_bytes = base64.b64decode(embedding_b64_str)
+                # Finally unpickle to numpy array
+                embedding_array = pickle.loads(pickle_bytes)
+            elif isinstance(embedding_data, str):
+                # Decode base64 string to bytes first
+                embedding_bytes = base64.b64decode(embedding_data)
+                # Then unpickle to numpy array
                 embedding_array = pickle.loads(embedding_bytes)
-            elif isinstance(embedding_bytes, memoryview):
+            elif isinstance(embedding_data, bytes):
+                # Direct pickle deserialização
+                embedding_array = pickle.loads(embedding_data)
+            elif isinstance(embedding_data, memoryview):
                 # Se vier como memoryview, converter para bytes primeiro
-                embedding_array = pickle.loads(bytes(embedding_bytes))
+                embedding_array = pickle.loads(bytes(embedding_data))
             else:
                 # Fallback: tentar converter diretamente
-                embedding_array = np.array(embedding_bytes)
+                embedding_array = np.array(embedding_data)
             
             known_encodings.append(embedding_array)
             known_ids.append(face_record['aluno_id'])
@@ -75,6 +93,7 @@ def recognize_face(
         except Exception as e:
             # Ignora registros mal formatados, mas imprime o erro para debug
             print(f"Erro ao processar embedding do aluno ID {face_record.get('aluno_id')}: {e}")
+            print(f"Tipo do embedding: {type(face_record.get('embedding'))}")
             continue
 
     if not known_encodings:

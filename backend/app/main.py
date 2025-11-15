@@ -7,7 +7,6 @@ Main FastAPI application file.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
-    students, faces, comparison,
     turmas, professores, alunos, presencas
 )
 
@@ -32,16 +31,10 @@ app.add_middleware(
 )
 
 # Include routers
-# New schema routers
 app.include_router(turmas.router)
 app.include_router(professores.router)
 app.include_router(alunos.router)
 app.include_router(presencas.router)
-
-# Legacy routers (for backward compatibility)
-app.include_router(students.router)
-app.include_router(faces.router)
-app.include_router(comparison.router)
 
 
 @app.get("/")
@@ -49,15 +42,16 @@ def root():
     """API root endpoint"""
     return {
         "message": "Sistema de Chamada Automática API",
-        "version": "2.0",
+        "version": "3.0",
+        "description": "Face recognition attendance system",
         "endpoints": {
-            "turmas": "/turmas",
-            "professores": "/professores",
-            "alunos": "/alunos",
-            "presencas": "/presencas",
-            "legacy_students": "/students",
-            "legacy_faces": "/faces",
-            "legacy_comparison": "/comparison"
+            "turmas": "/turmas - Manage classes",
+            "professores": "/professores - Manage professors",
+            "alunos": "/alunos - Manage students",
+            "presencas": "/presencas - Manage attendance",
+            "cadastrar": "/alunos/cadastrar - Register student with photos",
+            "reconhecer": "/alunos/reconhecer - Recognize face and register attendance",
+            "teste": "/alunos/reconhecer/teste - Test face recognition"
         }
     }
 

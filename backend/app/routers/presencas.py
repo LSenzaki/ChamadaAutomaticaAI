@@ -29,10 +29,51 @@ class PresencaResponse(BaseModel):
     aluno_id: int
     turma_id: Optional[int]
     data_hora: str
+    tipo_registro: Optional[str]  # 'entrada' or 'saida'
     confianca: Optional[float]
     check_professor: bool
     validado_em: Optional[str]
     validado_por: Optional[int]
+
+
+@router.get("/hoje")
+def get_presencas_hoje(
+    db: SupabaseDB = Depends(get_db_manager)
+):
+    """Get all attendance records for today with entry/exit summary"""
+    from datetime import date
+    today = date.today().isoformat()
+    
+    response = db.client.table('presencas').select(
+        '*, alunos(id, nome), turmas(nome)'
+    ).gte('data_hora', today).order('data_hora', desc=False).execute()
+    
+    presencas = response.data if response.data else []
+    
+    # Calculate summary
+    alunos_em_aula = set()
+    for p in presencas:
+        aluno_id = p.get('aluno_id')
+        tipo = p.get('tipo_registro', 'entrada')
+        if tipo == 'entrada':
+            alunos_em_aula.add(aluno_id)
+        elif tipo == 'saida' and aluno_id in alunos_em_aula:
+            alunos_em_aula.discard(aluno_id)
+    
+    return {
+        "data": today,
+        "presencas": presencas,
+        "total_registros": len(presencas),
+        "alunos_atualmente_em_aula": len(alunos_em_aula),
+        "total_entradas": sum(
+            1 for p in presencas 
+            if p.get('tipo_registro', 'entrada') == 'entrada'
+        ),
+        "total_saidas": sum(
+            1 for p in presencas 
+            if p.get('tipo_registro') == 'saida'
+        )
+    }
 
 
 @router.get("/", response_model=List[Dict[str, Any]])

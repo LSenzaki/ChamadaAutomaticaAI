@@ -2,9 +2,6 @@
 Routers package - API endpoint modules
 """
 from . import (
-    students,
-    faces,
-    comparison,
     turmas,
     professores,
     alunos,
@@ -12,9 +9,6 @@ from . import (
 )
 
 __all__ = [
-    "students",
-    "faces",
-    "comparison",
     "turmas",
     "professores",
     "alunos",
