@@ -257,21 +257,12 @@ async def reconhecer_rosto(
         }
     
     # Check if student is currently in class (for entry/exit logic)
-    is_in_class = db.is_student_in_class(result.aluno_id)
-    tipo_registro = 'saida' if is_in_class else 'entrada'
-    
-    print("DEBUG RECONHECIMENTO:")
-    print(f"  - Aluno: {aluno['nome']} (ID: {result.aluno_id})")
-    print(f"  - Está em aula: {is_in_class}")
-    print(f"  - Tipo de registro: {tipo_registro}")
-    
-    # Register attendance (smart detection: entrada or saida)
+    # Register attendance
     turma_id = aluno.get('turma_id')
     presenca = db.create_presenca(
         aluno_id=result.aluno_id,
         turma_id=turma_id if turma_id else 0,
-        confianca=result.confidence if result.confidence else 0.0,
-        tipo_registro=tipo_registro
+        confianca=result.confidence if result.confidence else 0.0
     )
     
     return {
@@ -284,12 +275,8 @@ async def reconhecer_rosto(
         "tempo_processamento": result.processing_time,
         "presenca_registrada": True,
         "presenca_id": presenca['id'],
-        "tipo_registro": presenca['tipo_registro'],
         "data_hora": presenca['data_hora'],
-        "mensagem": (
-            f"{'Entrada' if tipo_registro == 'entrada' else 'Saída'} "
-            f"registrada com sucesso"
-        )
+        "mensagem": "Presença registrada com sucesso"
     }
 
 
@@ -380,8 +367,7 @@ def registrar_saida(
     presenca = db.create_presenca(
         aluno_id=aluno_id,
         turma_id=turma_id if turma_id else 0,
-        confianca=None,
-        tipo_registro='saida'
+        confianca=None
     )
     
     return {
@@ -389,7 +375,6 @@ def registrar_saida(
         "aluno_id": aluno_id,
         "aluno_nome": aluno['nome'],
         "presenca_id": presenca['id'],
-        "tipo_registro": presenca['tipo_registro'],
         "data_hora": presenca['data_hora']
     }
 
@@ -436,13 +421,7 @@ def get_presencas_hoje(
         "aluno_nome": aluno['nome'],
         "data": today,
         "esta_em_aula": is_in_class,
-        "presencas": presencas,
-        "total_entradas": sum(
-            1 for p in presencas if p.get('tipo_registro') == 'entrada'
-        ),
-        "total_saidas": sum(
-            1 for p in presencas if p.get('tipo_registro') == 'saida'
-        )
+        "presencas": presencas
     }
 
 

@@ -13,6 +13,7 @@ from deepface import DeepFace
 import json
 import tempfile
 import os
+from app.services.face_service import preprocess_image
 
 # Configurações do DeepFace
 DEEPFACE_MODEL = "Facenet512"  # Opções: VGG-Face, Facenet, Facenet512, OpenFace, DeepFace, DeepID, ArcFace, Dlib, SFace
@@ -33,9 +34,10 @@ DEEPFACE_THRESHOLDS = {
 }
 
 def get_deepface_encoding(
-    file: UploadFile, 
+    file: UploadFile,
     model_name: str = DEEPFACE_MODEL,
-    detector_backend: str = DEEPFACE_DETECTOR
+    detector_backend: str = DEEPFACE_DETECTOR,
+    preprocess: bool = True
 ) -> Optional[np.ndarray]:
     """
     Extrai o embedding facial usando DeepFace.
@@ -44,6 +46,7 @@ def get_deepface_encoding(
         file: Arquivo de imagem enviado
         model_name: Modelo de reconhecimento facial a ser usado
         detector_backend: Backend de detecção de faces
+        preprocess: Se True, redimensiona para 300x300px (padrão: True)
     
     Returns:
         Array numpy com o embedding ou None se nenhum rosto for detectado
@@ -52,11 +55,17 @@ def get_deepface_encoding(
         # Ler bytes da imagem
         image_bytes = file.file.read()
         
+        # Preprocessar imagem se solicitado
+        if preprocess:
+            image_bytes = preprocess_image(image_bytes)
+        
         # Converter para PIL Image
         image = Image.open(io.BytesIO(image_bytes))
         
         # Salvar temporariamente (DeepFace trabalha melhor com arquivos)
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix='.jpg'
+        ) as tmp_file:
             image.save(tmp_file.name)
             tmp_path = tmp_file.name
         

@@ -19,6 +19,13 @@ class ProfessorCreate(BaseModel):
     turma_ids: List[int] = []
 
 
+class ProfessorUpdate(BaseModel):
+    nome: str = None
+    email: str = None
+    turma_ids: List[int] = None
+    ativo: bool = None
+
+
 class ProfessorResponse(BaseModel):
     id: int
     nome: str
@@ -43,6 +50,22 @@ def create_professor(
         nome=professor.nome,
         email=professor.email,
         turma_ids=professor.turma_ids
+    )
+
+
+@router.put("/{professor_id}", response_model=Dict[str, Any])
+def update_professor(
+    professor_id: int,
+    professor: ProfessorUpdate,
+    db: SupabaseDB = Depends(get_db_manager)
+):
+    """Update a professor and their assigned classes"""
+    return db.update_professor(
+        professor_id=professor_id,
+        nome=professor.nome,
+        email=professor.email,
+        turma_ids=professor.turma_ids,
+        ativo=professor.ativo
     )
 
 

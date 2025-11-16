@@ -1,15 +1,117 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Users, UserCheck, Upload, Trash2, CheckCircle, XCircle, Video, VideoOff, BookOpen, Search, Calendar } from 'lucide-react';
+import { Camera, Users, UserCheck, Trash2, CheckCircle, XCircle, Video, VideoOff, BookOpen, Search, Calendar, Edit } from 'lucide-react';
 
 const API_URL = 'http://localhost:8000';
 
 // Componente: Tela do Aluno (Reconhecimento em Stream)
 const AlunoScreen = () => {
+  const [turmaSelecionada, setTurmaSelecionada] = useState(null);
+  const [chamadaIniciada, setChamadaIniciada] = useState(false);
+
+  if (!chamadaIniciada) {
+    return <SelecionarTurma setTurmaSelecionada={setTurmaSelecionada} setChamadaIniciada={setChamadaIniciada} />;
+  }
+
+  return <TelaReconhecimento turma={turmaSelecionada} setChamadaIniciada={setChamadaIniciada} />;
+};
+
+// Componente: Selecionar Turma
+const SelecionarTurma = ({ setTurmaSelecionada, setChamadaIniciada }) => {
+  const [turmas, setTurmas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => {
+    carregarTurmas();
+  }, []);
+
+  const carregarTurmas = async () => {
+    try {
+      const response = await fetch(`${API_URL}/turmas/`);
+      const data = await response.json();
+      setTurmas(data);
+    } catch (err) {
+      alert('Erro ao carregar turmas: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const iniciarChamada = (turma) => {
+    setTurmaSelecionada(turma);
+    setChamadaIniciada(true);
+  };
+
+  const turmasFiltradas = turmas.filter(turma => 
+    turma.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <BookOpen className="w-6 h-6" />
+          Iniciar Chamada - Selecione a Turma
+        </h2>
+
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Buscar turma..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <p className="text-center py-8 text-gray-500">Carregando turmas...</p>
+        ) : turmasFiltradas.length === 0 ? (
+          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+            <p className="font-semibold">Nenhuma turma encontrada</p>
+            {busca && <p className="text-sm mt-2">Tente buscar com outros termos</p>}
+          </div>
+        ) : (
+          <div className="grid gap-3 max-h-[500px] overflow-y-auto">
+            {turmasFiltradas.map(turma => (
+              <button
+                key={turma.id}
+                onClick={() => iniciarChamada(turma)}
+                className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600">
+                      {turma.nome}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      ID: {turma.id}
+                    </p>
+                  </div>
+                  <div className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    →
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Componente: Tela de Reconhecimento
+const TelaReconhecimento = ({ turma, setChamadaIniciada }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [modoTeste, setModoTeste] = useState(false);
 
   useEffect(() => {
     if (streaming) {
@@ -40,7 +142,7 @@ const AlunoScreen = () => {
     }
   };
 
-  const capturarEReconhecer = async () => {
+  const capturarEReconhecer = async (teste = false) => {
     if (!videoRef.current) return;
     
     const canvas = canvasRef.current;
@@ -55,12 +157,13 @@ const AlunoScreen = () => {
       formData.append('foto', blob, 'captura.jpg');
 
       try {
-        const response = await fetch(`${API_URL}/faces/reconhecer`, {
+        const endpoint = teste ? '/alunos/reconhecer/teste' : '/alunos/reconhecer';
+        const response = await fetch(`${API_URL}${endpoint}`, {
           method: 'POST',
           body: formData
         });
         const data = await response.json();
-        setResultado(data);
+        setResultado({...data, modoTeste: teste});
       } catch (err) {
         alert('Erro ao reconhecer: ' + err.message);
       } finally {
@@ -72,12 +175,30 @@ const AlunoScreen = () => {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Camera className="w-6 h-6" />
-          Reconhecimento de Presença
-        </h2>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Camera className="w-6 h-6" />
+              Reconhecimento de Presença
+            </h2>
+            <div className="mt-2 p-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-600">
+                <span className="font-semibold">Turma:</span> {turma.nome}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              stopCamera();
+              setChamadaIniciada(false);
+            }}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition-colors"
+          >
+            ← Trocar Turma
+          </button>
+        </div>
         
-        <div className="mb-4">
+        <div className="mb-4 flex gap-3 mt-6">
           <button
             onClick={() => setStreaming(!streaming)}
             className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${
@@ -87,6 +208,16 @@ const AlunoScreen = () => {
             {streaming ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             {streaming ? 'Parar Câmera' : 'Iniciar Câmera'}
           </button>
+          
+          <label className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+            <input
+              type="checkbox"
+              checked={modoTeste}
+              onChange={(e) => setModoTeste(e.target.checked)}
+              className="w-5 h-5 text-blue-600 rounded"
+            />
+            <span className="font-semibold text-gray-700">Modo Teste (não registra presença)</span>
+          </label>
         </div>
 
         {streaming && (
@@ -98,11 +229,11 @@ const AlunoScreen = () => {
               className="w-full rounded-lg mb-4 bg-black"
             />
             <button
-              onClick={capturarEReconhecer}
+              onClick={() => capturarEReconhecer(modoTeste)}
               disabled={loading}
               className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg disabled:opacity-50"
             >
-              {loading ? 'Reconhecendo...' : 'Registrar Presença'}
+              {loading ? 'Reconhecendo...' : (modoTeste ? 'Testar Reconhecimento' : 'Registrar Presença')}
             </button>
           </>
         )}
@@ -111,18 +242,46 @@ const AlunoScreen = () => {
         
         {resultado && (
           <div className={`mt-6 p-4 rounded-lg ${
-            resultado.mais_provavel ? 'bg-green-50 border-2 border-green-500' : 'bg-red-50 border-2 border-red-500'
+            resultado.reconhecido ? 'bg-green-50 border-2 border-green-500' : 'bg-red-50 border-2 border-red-500'
           }`}>
-            {resultado.mais_provavel ? (
+            {resultado.reconhecido ? (
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle className="w-6 h-6 text-green-600" />
-                  <h3 className="text-xl font-bold text-green-800">Presença Registrada!</h3>
+                  <h3 className="text-xl font-bold text-green-800">
+                    {resultado.modoTeste ? 'Reconhecido!' : 
+                     (resultado.tipo_registro === 'entrada' ? 'Entrada Registrada!' : 'Saída Registrada!')}
+                  </h3>
                 </div>
-                <p className="text-lg">Nome: <strong>{resultado.mais_provavel.nome}</strong></p>
+                <p className="text-lg">Nome: <strong>{resultado.aluno_nome}</strong></p>
                 <p className="text-sm text-gray-600">
-                  Confiança: {resultado.mais_provavel.similaridade}%
+                  Confiança: {resultado.confianca ? Math.round(resultado.confianca) : 'N/A'}%
                 </p>
+                <p className="text-sm text-gray-600">
+                  Método: {resultado.metodo || 'N/A'}
+                </p>
+                {resultado.tempo_processamento && (
+                  <p className="text-sm text-gray-600">
+                    Tempo: {resultado.tempo_processamento.toFixed(2)}s
+                  </p>
+                )}
+                {resultado.mensagem && (
+                  <p className="text-sm text-gray-600 mt-2">{resultado.mensagem}</p>
+                )}
+                {resultado.modoTeste && (
+                  <div className="mt-3 p-2 bg-yellow-100 rounded">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Modo Teste:</strong> Presença não foi registrada
+                    </p>
+                  </div>
+                )}
+                {!resultado.check_professor && !resultado.modoTeste && (
+                  <div className="mt-3 p-2 bg-yellow-100 rounded">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Atenção:</strong> Aguardando validação do professor
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -131,6 +290,11 @@ const AlunoScreen = () => {
                   <h3 className="text-xl font-bold text-red-800">Não Reconhecido</h3>
                 </div>
                 <p>{resultado.mensagem || 'Aluno não encontrado'}</p>
+                {resultado.confianca && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Confiança máxima: {Math.round(resultado.confianca)}%
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -202,7 +366,7 @@ const ValidarAlunos = ({ setMenuAtual }) => {
 
   const carregarAlunos = async () => {
     try {
-      const response = await fetch(`${API_URL}/students/listar`);
+      const response = await fetch(`${API_URL}/alunos/`);
       const data = await response.json();
       setAlunos(data);
     } catch (err) {
@@ -213,10 +377,10 @@ const ValidarAlunos = ({ setMenuAtual }) => {
   const validarAluno = async (id, validado) => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/students/validar/${id}`, {
+      const response = await fetch(`${API_URL}/alunos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ validado })
+        body: JSON.stringify({ check_professor: validado })
       });
       await response.json();
       await carregarAlunos();
@@ -318,10 +482,9 @@ const ValidarPresencas = ({ setMenuAtual }) => {
   const carregarPresencas = async (data) => {
     setLoading(true);
     try {
-      const dataFormatada = data.toISOString().split('T')[0];
-      const response = await fetch(`${API_URL}/attendance/date/${dataFormatada}`);
-      const data_response = await response.json();
-      setPresencas(data_response);
+      const response = await fetch(`${API_URL}/presencas/hoje`);
+      const result = await response.json();
+      setPresencas(result.presencas || []);
     } catch (err) {
       console.error('Erro ao carregar presenças:', err);
       setPresencas([]);
@@ -332,10 +495,10 @@ const ValidarPresencas = ({ setMenuAtual }) => {
 
   const validarPresenca = async (id, validado) => {
     try {
-      await fetch(`${API_URL}/attendance/${id}/validate`, {
+      await fetch(`${API_URL}/presencas/${id}/validate`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ validado })
+        body: JSON.stringify({ professor_id: 1 })
       });
       if (dataSelecionada) {
         carregarPresencas(dataSelecionada);
@@ -348,8 +511,15 @@ const ValidarPresencas = ({ setMenuAtual }) => {
   // Agrupa presenças por turma
   const presencasPorTurma = presencas.reduce((acc, presenca) => {
     const turmaId = presenca.turma_id || 'sem_turma';
-    const turmaNome = presenca.turma_nome || 'Sem Turma';
+    const turmaNome = presenca.turmas?.nome || presenca.turma_nome || 'Sem Turma';
     const professorNome = presenca.professor_nome || 'Não atribuído';
+    
+    // Adiciona o nome do aluno extraído do objeto aninhado
+    const presencaComNome = {
+      ...presenca,
+      aluno_nome: presenca.alunos?.nome || presenca.aluno_nome || 'Nome não disponível',
+      turma_nome: turmaNome
+    };
     
     if (!acc[turmaId]) {
       acc[turmaId] = {
@@ -359,7 +529,7 @@ const ValidarPresencas = ({ setMenuAtual }) => {
         presencas: []
       };
     }
-    acc[turmaId].presencas.push(presenca);
+    acc[turmaId].presencas.push(presencaComNome);
     return acc;
   }, {});
 
@@ -424,10 +594,6 @@ const ValidarPresencas = ({ setMenuAtual }) => {
     if (!data || !dataSelecionada) return false;
     return data.toDateString() === dataSelecionada.toDateString();
   };
-
-  const presencasFiltradas = turmaSelecionada 
-    ? presencas.filter(p => (p.turma_id || 'sem_turma') === turmaSelecionada)
-    : presencas;
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -575,11 +741,26 @@ const ValidarPresencas = ({ setMenuAtual }) => {
 
                         {/* Lista de presenças da turma */}
                         <div className="space-y-3">
-                          {turmaInfo.presencas.map(presenca => (
-                            <div key={presenca.id} className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-green-400 transition-colors">
-                              <div className="flex items-start justify-between">
+                          {turmaInfo.presencas.map(presenca => {
+                            const isLowConfidence = presenca.confianca < 70;
+                            return (
+                            <div key={presenca.id} className={`bg-white rounded-lg p-4 transition-colors ${
+                              isLowConfidence 
+                                ? 'border-2 border-orange-400 shadow-lg' 
+                                : 'border-2 border-gray-200 hover:border-green-400'
+                            }`}>
+                              {isLowConfidence && (
+                                <div className="mb-3 p-2 bg-orange-50 border border-orange-300 rounded-lg">
+                                  <p className="text-sm font-semibold text-orange-800 flex items-center gap-2">
+                                    ⚠️ Baixa Confiança - Verificação Manual Recomendada
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-start justify-between gap-4">
+                                {/* Informações do Aluno */}
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center gap-3 mb-3">
                                     <h4 className="text-lg font-bold text-gray-800">{presenca.aluno_nome}</h4>
                                     {presenca.check_professor ? (
                                       <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
@@ -592,27 +773,54 @@ const ValidarPresencas = ({ setMenuAtual }) => {
                                     )}
                                   </div>
                                   
-                                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                                    <div>
-                                      <span className="font-semibold">ID Aluno:</span> {presenca.aluno_id}
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                      <span className="font-semibold text-gray-700">ID Aluno:</span>
+                                      <span className="text-gray-600">{presenca.aluno_id}</span>
                                     </div>
-                                    <div>
-                                      <span className="font-semibold">Horário:</span> {formatarHora(presenca.data_hora)}
+                                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                      <span className="font-semibold text-gray-700">Horário:</span>
+                                      <span className="text-gray-600">{formatarHora(presenca.data_hora)}</span>
                                     </div>
-                                    <div>
-                                      <span className="font-semibold">Confiança:</span> {presenca.confianca}%
+                                    <div className={`flex items-center gap-2 p-2 rounded ${
+                                      isLowConfidence ? 'bg-orange-100' : 'bg-gray-50'
+                                    }`}>
+                                      <span className="font-semibold text-gray-700">Confiança:</span>
+                                      <span className={`font-bold ${
+                                        isLowConfidence ? 'text-orange-700' : 'text-gray-600'
+                                      }`}>
+                                        {presenca.confianca}%
+                                      </span>
                                     </div>
-                                    <div>
-                                      <span className="font-semibold">ID Presença:</span> {presenca.id}
+                                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                      <span className="font-semibold text-gray-700">ID Presença:</span>
+                                      <span className="text-gray-600">{presenca.id}</span>
                                     </div>
                                   </div>
+
+                                  {/* Informações adicionais para baixa confiança */}
+                                  {isLowConfidence && (
+                                    <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                      <p className="text-sm font-semibold text-orange-900 mb-2">
+                                        📋 Informações Adicionais do Aluno
+                                      </p>
+                                      <div className="space-y-1 text-sm">
+                                        <p><span className="font-semibold">Nome Completo:</span> {presenca.aluno_nome}</p>
+                                        <p><span className="font-semibold">Turma ID:</span> {presenca.turma_id || 'Não atribuído'}</p>
+                                        <p className="text-orange-700 font-semibold mt-2">
+                                          Recomendação: Verificar manualmente a identidade do aluno antes de validar
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
 
-                                <div className="ml-4">
+                                {/* Botões de Ação */}
+                                <div className="flex flex-col gap-2">
                                   {!presenca.check_professor ? (
                                     <button
                                       onClick={() => validarPresenca(presenca.id, true)}
-                                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+                                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
                                     >
                                       <CheckCircle className="w-4 h-4" />
                                       Validar
@@ -620,7 +828,7 @@ const ValidarPresencas = ({ setMenuAtual }) => {
                                   ) : (
                                     <button
                                       onClick={() => validarPresenca(presenca.id, false)}
-                                      className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+                                      className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
                                     >
                                       <XCircle className="w-4 h-4" />
                                       Invalidar
@@ -629,7 +837,8 @@ const ValidarPresencas = ({ setMenuAtual }) => {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -649,22 +858,25 @@ const AdminMenu = ({ setMenuAtual }) => {
     { id: 'registrar', titulo: 'Registrar Aluno', descricao: 'Cadastrar novo aluno com nome e fotos', icon: Users, cor: 'blue' },
     { id: 'registrar-professor', titulo: 'Registrar Professor', descricao: 'Cadastrar professor e atribuir turmas', icon: UserCheck, cor: 'orange' },
     { id: 'turmas', titulo: 'Criar Turmas', descricao: 'Criar e gerenciar turmas/classes', icon: BookOpen, cor: 'green' },
-    { id: 'listar', titulo: 'Turmas e Alunos', descricao: 'Ver lista de turmas e seus alunos', icon: Search, cor: 'purple' }
+    { id: 'listar', titulo: 'Turmas e Alunos', descricao: 'Ver lista de turmas e seus alunos', icon: Search, cor: 'purple' },
+    { id: 'gerenciar-alunos', titulo: 'Gerenciar Alunos', descricao: 'Editar, deletar embeddings e ver presenças', icon: Trash2, cor: 'red' }
   ];
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-8">
       <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Painel Administrativo</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menuItems.map(item => {
           const Icon = item.icon;
           const bgColor = item.cor === 'blue' ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 hover:border-blue-400' : 
                           item.cor === 'green' ? 'bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-400' :
                           item.cor === 'orange' ? 'bg-orange-50 hover:bg-orange-100 border-orange-200 hover:border-orange-400' :
+                          item.cor === 'red' ? 'bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-400' :
                           'bg-purple-50 hover:bg-purple-100 border-purple-200 hover:border-purple-400';
           const iconColor = item.cor === 'blue' ? 'text-blue-600' : 
                             item.cor === 'green' ? 'text-green-600' : 
-                            item.cor === 'orange' ? 'text-orange-600' : 'text-purple-600';
+                            item.cor === 'orange' ? 'text-orange-600' : 
+                            item.cor === 'red' ? 'text-red-600' : 'text-purple-600';
           
           return (
             <button
@@ -699,7 +911,7 @@ const RegistrarAluno = ({ setMenuAtual }) => {
 
   const carregarTurmas = async () => {
     try {
-      const response = await fetch(`${API_URL}/classes/`);
+      const response = await fetch(`${API_URL}/turmas/`);
       const data = await response.json();
       setTurmas(data);
     } catch (err) {
@@ -741,12 +953,12 @@ const RegistrarAluno = ({ setMenuAtual }) => {
     });
 
     try {
-      const response = await fetch(`${API_URL}/students/cadastrar`, {
+      const response = await fetch(`${API_URL}/alunos/cadastrar`, {
         method: 'POST',
         body: formData
       });
       const data = await response.json();
-      alert(`Aluno cadastrado com sucesso! ${fotos.length} foto(s) enviada(s).`);
+      alert(data.mensagem || `Aluno cadastrado com sucesso! ${data.fotos_processadas || fotos.length} foto(s) processada(s).`);
       setNome('');
       setFotos([]);
       setTurmaSelecionada('');
@@ -892,6 +1104,7 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
   const [turmasSelecionadas, setTurmasSelecionadas] = useState([]);
   const [professores, setProfessores] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editandoProfessor, setEditandoProfessor] = useState(null);
 
   useEffect(() => {
     carregarTurmas();
@@ -900,7 +1113,7 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
 
   const carregarTurmas = async () => {
     try {
-      const response = await fetch(`${API_URL}/classes/`);
+      const response = await fetch(`${API_URL}/turmas/`);
       const data = await response.json();
       setTurmas(data);
     } catch (err) {
@@ -910,7 +1123,7 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
 
   const carregarProfessores = async () => {
     try {
-      const response = await fetch(`${API_URL}/professors/`);
+      const response = await fetch(`${API_URL}/professores/`);
       const data = await response.json();
       setProfessores(data);
     } catch (err) {
@@ -934,7 +1147,7 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/professors/`, {
+      const response = await fetch(`${API_URL}/professores/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -943,7 +1156,7 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
           turma_ids: turmasSelecionadas 
         })
       });
-      const data = await response.json();
+      await response.json();
       alert('Professor cadastrado com sucesso!');
       setNome('');
       setEmail('');
@@ -960,13 +1173,56 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
     if (!window.confirm('Deseja realmente remover este professor?')) return;
 
     try {
-      await fetch(`${API_URL}/professors/${id}`, {
+      await fetch(`${API_URL}/professores/${id}`, {
         method: 'DELETE'
       });
       alert('Professor removido com sucesso!');
       carregarProfessores();
     } catch (err) {
       alert('Erro ao remover professor: ' + err.message);
+    }
+  };
+
+  const iniciarEdicao = (professor) => {
+    setEditandoProfessor(professor);
+    setNome(professor.nome);
+    setEmail(professor.email);
+    // Get turma IDs from professor.turmas array
+    const turmaIds = professor.turmas ? professor.turmas.map(t => t.id) : [];
+    setTurmasSelecionadas(turmaIds);
+  };
+
+  const cancelarEdicao = () => {
+    setEditandoProfessor(null);
+    setNome('');
+    setEmail('');
+    setTurmasSelecionadas([]);
+  };
+
+  const atualizarProfessor = async () => {
+    if (!nome.trim() || !email.trim()) {
+      alert('Preencha o nome e email do professor');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/professores/${editandoProfessor.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          nome, 
+          email,
+          turma_ids: turmasSelecionadas 
+        })
+      });
+      alert('Professor atualizado com sucesso!');
+      cancelarEdicao();
+      carregarProfessores();
+    } catch (err) {
+      alert('Erro ao atualizar professor: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -989,7 +1245,9 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
         {/* Formulário de Cadastro */}
         <div>
           <div className="bg-orange-50 p-6 rounded-lg space-y-4">
-            <h3 className="text-lg font-bold text-orange-800 mb-4">Cadastrar Novo Professor</h3>
+            <h3 className="text-lg font-bold text-orange-800 mb-4">
+              {editandoProfessor ? 'Editar Professor' : 'Cadastrar Novo Professor'}
+            </h3>
             
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700">Nome Completo</label>
@@ -1047,12 +1305,21 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
             </div>
 
             <button
-              onClick={cadastrarProfessor}
+              onClick={editandoProfessor ? atualizarProfessor : cadastrarProfessor}
               disabled={loading}
               className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Cadastrando...' : 'Cadastrar Professor'}
+              {loading ? (editandoProfessor ? 'Atualizando...' : 'Cadastrando...') : (editandoProfessor ? 'Atualizar Professor' : 'Cadastrar Professor')}
             </button>
+
+            {editandoProfessor && (
+              <button
+                onClick={cancelarEdicao}
+                className="w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg transition-colors"
+              >
+                Cancelar Edição
+              </button>
+            )}
           </div>
         </div>
 
@@ -1072,13 +1339,22 @@ const RegistrarProfessor = ({ setMenuAtual }) => {
                       <h4 className="text-lg font-bold text-gray-800">{professor.nome}</h4>
                       <p className="text-sm text-gray-600">{professor.email}</p>
                     </div>
-                    <button
-                      onClick={() => removerProfessor(professor.id)}
-                      className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-1 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Remover
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => iniciarEdicao(professor)}
+                        className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center gap-1 transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => removerProfessor(professor.id)}
+                        className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Remover
+                      </button>
+                    </div>
                   </div>
                   
                   {professor.turmas && professor.turmas.length > 0 ? (
@@ -1120,7 +1396,7 @@ const CriarTurmas = ({ setMenuAtual }) => {
 
   const carregarTurmas = async () => {
     try {
-      const response = await fetch(`${API_URL}/classes/`);
+      const response = await fetch(`${API_URL}/turmas/`);
       const data = await response.json();
       setTurmas(data);
     } catch (err) {
@@ -1136,7 +1412,7 @@ const CriarTurmas = ({ setMenuAtual }) => {
 
     setLoading(true);
     try {
-      await fetch(`${API_URL}/classes/`, {
+      await fetch(`${API_URL}/turmas/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: nomeTurma })
@@ -1155,7 +1431,7 @@ const CriarTurmas = ({ setMenuAtual }) => {
     if (!window.confirm('Deseja realmente remover esta turma?')) return;
 
     try {
-      await fetch(`${API_URL}/classes/${id}`, {
+      await fetch(`${API_URL}/turmas/${id}`, {
         method: 'DELETE'
       });
       alert('Turma removida com sucesso!');
@@ -1247,7 +1523,7 @@ const ListarTurmasAlunos = ({ setMenuAtual }) => {
 
   const carregarTurmas = async () => {
     try {
-      const response = await fetch(`${API_URL}/classes/`);
+      const response = await fetch(`${API_URL}/turmas/`);
       const data = await response.json();
       setTurmas(data);
     } catch (err) {
@@ -1258,7 +1534,7 @@ const ListarTurmasAlunos = ({ setMenuAtual }) => {
   const carregarAlunos = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/students/listar`);
+      const response = await fetch(`${API_URL}/alunos/`);
       const data = await response.json();
       setAlunos(data);
     } catch (err) {
@@ -1389,6 +1665,316 @@ const ListarTurmasAlunos = ({ setMenuAtual }) => {
   );
 };
 
+// Tela: Gerenciar Alunos (CRUD completo)
+const GerenciarAlunos = ({ setMenuAtual }) => {
+  const [alunos, setAlunos] = useState([]);
+  const [turmas, setTurmas] = useState([]);
+  const [alunoSelecionado, setAlunoSelecionado] = useState(null);
+  const [presencasHoje, setPresencasHoje] = useState(null);
+  const [editando, setEditando] = useState(false);
+  const [nomeEdit, setNomeEdit] = useState('');
+  const [turmaEdit, setTurmaEdit] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    carregarAlunos();
+    carregarTurmas();
+  }, []);
+
+  const carregarAlunos = async () => {
+    try {
+      const response = await fetch(`${API_URL}/alunos/`);
+      const data = await response.json();
+      setAlunos(data);
+    } catch (err) {
+      console.error('Erro ao carregar alunos:', err);
+    }
+  };
+
+  const carregarTurmas = async () => {
+    try {
+      const response = await fetch(`${API_URL}/turmas/`);
+      const data = await response.json();
+      setTurmas(data);
+    } catch (err) {
+      console.error('Erro ao carregar turmas:', err);
+    }
+  };
+
+  const verDetalhes = async (aluno) => {
+    setAlunoSelecionado(aluno);
+    setNomeEdit(aluno.nome);
+    setTurmaEdit(aluno.turma_id || '');
+    setEditando(false);
+    
+    // Carregar presenças de hoje
+    try {
+      const response = await fetch(`${API_URL}/alunos/${aluno.id}/presencas/hoje`);
+      const data = await response.json();
+      setPresencasHoje(data);
+    } catch (err) {
+      console.error('Erro ao carregar presenças:', err);
+      setPresencasHoje(null);
+    }
+  };
+
+  const atualizarAluno = async () => {
+    if (!nomeEdit.trim()) {
+      alert('Nome não pode estar vazio');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const updateData = {
+        nome: nomeEdit,
+        turma_id: turmaEdit || null
+      };
+      
+      await fetch(`${API_URL}/alunos/${alunoSelecionado.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+      
+      alert('Aluno atualizado com sucesso!');
+      setEditando(false);
+      await carregarAlunos();
+      await verDetalhes({ ...alunoSelecionado, nome: nomeEdit, turma_id: turmaEdit });
+    } catch (err) {
+      alert('Erro ao atualizar aluno: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletarEmbeddings = async (alunoId) => {
+    if (!window.confirm('Deseja realmente deletar todos os embeddings deste aluno? Será necessário recadastrar as fotos.')) return;
+
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/alunos/${alunoId}/embeddings`, {
+        method: 'DELETE'
+      });
+      alert('Embeddings deletados com sucesso! Recadastre as fotos do aluno.');
+    } catch (err) {
+      alert('Erro ao deletar embeddings: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletarAluno = async (alunoId) => {
+    if (!window.confirm('Deseja realmente DELETAR este aluno? Esta ação não pode ser desfeita!')) return;
+
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/alunos/${alunoId}`, {
+        method: 'DELETE'
+      });
+      alert('Aluno deletado com sucesso!');
+      setAlunoSelecionado(null);
+      await carregarAlunos();
+    } catch (err) {
+      alert('Erro ao deletar aluno: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registrarSaida = async (alunoId) => {
+    if (!window.confirm('Registrar saída manual para este aluno?')) return;
+
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/alunos/saida/${alunoId}`, {
+        method: 'POST'
+      });
+      alert('Saída registrada com sucesso!');
+      await verDetalhes(alunoSelecionado);
+    } catch (err) {
+      alert('Erro ao registrar saída: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Trash2 className="w-6 h-6" />
+          Gerenciar Alunos
+        </h2>
+        <button
+          onClick={() => setMenuAtual('menu')}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition-colors"
+        >
+          ← Voltar ao Menu
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Lista de Alunos */}
+        <div>
+          <h3 className="text-lg font-bold mb-4 text-gray-800">Lista de Alunos</h3>
+          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            {alunos.map(aluno => (
+              <button
+                key={aluno.id}
+                onClick={() => verDetalhes(aluno)}
+                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                  alunoSelecionado?.id === aluno.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-800">{aluno.nome}</h4>
+                    <p className="text-sm text-gray-600">
+                      ID: {aluno.id} | Turma: {turmas.find(t => t.id === aluno.turma_id)?.nome || 'Sem turma'}
+                    </p>
+                  </div>
+                  {aluno.check_professor ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-yellow-600" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Detalhes do Aluno */}
+        <div>
+          {!alunoSelecionado ? (
+            <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg p-8">
+              <p className="text-gray-500 text-center">Selecione um aluno para ver detalhes e opções</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-bold mb-4 text-gray-800">Informações do Aluno</h3>
+                
+                {!editando ? (
+                  <div className="space-y-2">
+                    <p><strong>Nome:</strong> {alunoSelecionado.nome}</p>
+                    <p><strong>ID:</strong> {alunoSelecionado.id}</p>
+                    <p><strong>Turma:</strong> {turmas.find(t => t.id === alunoSelecionado.turma_id)?.nome || 'Sem turma'}</p>
+                    <p><strong>Status:</strong> {alunoSelecionado.check_professor ? 
+                      <span className="text-green-600">Validado</span> : 
+                      <span className="text-yellow-600">Pendente</span>
+                    }</p>
+                    <button
+                      onClick={() => setEditando(true)}
+                      className="mt-4 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold"
+                    >
+                      Editar Informações
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Nome</label>
+                      <input
+                        type="text"
+                        value={nomeEdit}
+                        onChange={(e) => setNomeEdit(e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Turma</label>
+                      <select
+                        value={turmaEdit}
+                        onChange={(e) => setTurmaEdit(e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg"
+                      >
+                        <option value="">Sem turma</option>
+                        {turmas.map(turma => (
+                          <option key={turma.id} value={turma.id}>{turma.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={atualizarAluno}
+                        disabled={loading}
+                        className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold disabled:opacity-50"
+                      >
+                        Salvar
+                      </button>
+                      <button
+                        onClick={() => setEditando(false)}
+                        className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-semibold"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Presenças de Hoje */}
+              {presencasHoje && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-blue-800">Presenças de Hoje</h4>
+                  <p className="text-sm mb-2">
+                    Status: {presencasHoje.esta_em_aula ? 
+                      <span className="text-green-600 font-bold">Em Aula</span> : 
+                      <span className="text-gray-600">Fora da Aula</span>
+                    }
+                  </p>
+                  <p className="text-sm mb-2">
+                    Entradas: {presencasHoje.total_entradas} | Saídas: {presencasHoje.total_saidas}
+                  </p>
+                  {presencasHoje.esta_em_aula && (
+                    <button
+                      onClick={() => registrarSaida(alunoSelecionado.id)}
+                      disabled={loading}
+                      className="w-full mt-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50"
+                    >
+                      Registrar Saída Manual
+                    </button>
+                  )}
+                  <div className="mt-3 space-y-1 max-h-40 overflow-y-auto">
+                    {presencasHoje.presencas.map(p => (
+                      <div key={p.id} className="text-xs bg-white p-2 rounded">
+                        {new Date(p.data_hora).toLocaleTimeString('pt-BR')} - {p.tipo_registro}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ações Perigosas */}
+              <div className="bg-red-50 p-4 rounded-lg space-y-2">
+                <h4 className="font-bold mb-2 text-red-800">Ações Administrativas</h4>
+                <button
+                  onClick={() => deletarEmbeddings(alunoSelecionado.id)}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50"
+                >
+                  Deletar Embeddings (Requer recadastro de fotos)
+                </button>
+                <button
+                  onClick={() => deletarAluno(alunoSelecionado.id)}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm disabled:opacity-50"
+                >
+                  Deletar Aluno (Permanente)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Componente: Tela do Admin
 const AdminScreen = () => {
   const [menuAtual, setMenuAtual] = useState('menu');
@@ -1405,6 +1991,8 @@ const AdminScreen = () => {
         <CriarTurmas setMenuAtual={setMenuAtual} />
       ) : menuAtual === 'listar' ? (
         <ListarTurmasAlunos setMenuAtual={setMenuAtual} />
+      ) : menuAtual === 'gerenciar-alunos' ? (
+        <GerenciarAlunos setMenuAtual={setMenuAtual} />
       ) : null}
     </div>
   );

@@ -29,7 +29,6 @@ class PresencaResponse(BaseModel):
     aluno_id: int
     turma_id: Optional[int]
     data_hora: str
-    tipo_registro: Optional[str]  # 'entrada' or 'saida'
     confianca: Optional[float]
     check_professor: bool
     validado_em: Optional[str]
@@ -40,39 +39,41 @@ class PresencaResponse(BaseModel):
 def get_presencas_hoje(
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Get all attendance records for today with entry/exit summary"""
+    """Get all attendance records for today"""
     from datetime import date
     today = date.today().isoformat()
     
     response = db.client.table('presencas').select(
-        '*, alunos(id, nome), turmas(nome)'
+        '*, alunos(id, nome), turmas(id, nome)'
     ).gte('data_hora', today).order('data_hora', desc=False).execute()
     
     presencas = response.data if response.data else []
     
-    # Calculate summary
-    alunos_em_aula = set()
-    for p in presencas:
-        aluno_id = p.get('aluno_id')
-        tipo = p.get('tipo_registro', 'entrada')
-        if tipo == 'entrada':
-            alunos_em_aula.add(aluno_id)
-        elif tipo == 'saida' and aluno_id in alunos_em_aula:
-            alunos_em_aula.discard(aluno_id)
+    # Enrich presencas with professor information
+    for presenca in presencas:
+        turma_id = presenca.get('turma_id')
+        if turma_id:
+            # Get professors assigned to this turma
+            prof_response = db.client.table('turmas_professores').select(
+                'professores(id, nome)'
+            ).eq('turma_id', turma_id).execute()
+            
+            if prof_response.data and len(prof_response.data) > 0:
+                # Get the first professor assigned (or could return all)
+                professor_data = prof_response.data[0].get('professores', {})
+                presenca['professor_nome'] = professor_data.get('nome', 'Não atribuído')
+                presenca['professor_id'] = professor_data.get('id')
+            else:
+                presenca['professor_nome'] = 'Não atribuído'
+                presenca['professor_id'] = None
+        else:
+            presenca['professor_nome'] = 'Não atribuído'
+            presenca['professor_id'] = None
     
     return {
         "data": today,
         "presencas": presencas,
-        "total_registros": len(presencas),
-        "alunos_atualmente_em_aula": len(alunos_em_aula),
-        "total_entradas": sum(
-            1 for p in presencas 
-            if p.get('tipo_registro', 'entrada') == 'entrada'
-        ),
-        "total_saidas": sum(
-            1 for p in presencas 
-            if p.get('tipo_registro') == 'saida'
-        )
+        "total_registros": len(presencas)
     }
 
 

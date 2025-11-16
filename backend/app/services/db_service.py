@@ -129,6 +129,51 @@ class SupabaseDB:
         
         return professor
     
+    def update_professor(
+        self, professor_id: int, nome: str = None, email: str = None,
+        turma_ids: List[int] = None, ativo: bool = None
+    ) -> Dict[str, Any]:
+        """Update a professor and their assigned classes"""
+        # Update professor basic info
+        update_data = {}
+        if nome is not None:
+            update_data["nome"] = nome
+        if email is not None:
+            update_data["email"] = email
+        if ativo is not None:
+            update_data["ativo"] = ativo
+        
+        if update_data:
+            prof_response = self.client.table('professores').update(
+                update_data
+            ).eq('id', professor_id).execute()
+            
+            if not prof_response.data:
+                return {}
+        
+        # Update class assignments if turma_ids is provided
+        if turma_ids is not None:
+            # Remove existing associations
+            self.client.table('turmas_professores').delete().eq(
+                'professor_id', professor_id
+            ).execute()
+            
+            # Add new associations
+            if turma_ids:
+                associations = [
+                    {"professor_id": professor_id, "turma_id": tid}
+                    for tid in turma_ids
+                ]
+                self.client.table('turmas_professores').insert(
+                    associations
+                ).execute()
+        
+        # Return updated professor
+        response = self.client.table('professores').select(
+            '*'
+        ).eq('id', professor_id).single().execute()
+        return response.data if response.data else {}
+    
     def delete_professor(self, professor_id: int) -> bool:
         """Delete a professor by ID"""
         response = self.client.table('professores').delete().eq(
@@ -262,48 +307,22 @@ class SupabaseDB:
         return response.data[0] if response.data else None
     
     def is_student_in_class(self, aluno_id: int) -> bool:
-        """Check if student is currently in class (last record is entrada)"""
-        last_attendance = self.get_student_last_attendance_today(aluno_id)
-        if not last_attendance:
-            print(f"DEBUG: Aluno {aluno_id} - "
-                  f"Nenhum registro hoje, retornando False")
-            return False
-        tipo = last_attendance.get('tipo_registro')
-        data_hora = last_attendance.get('data_hora')
-        print(f"DEBUG: Aluno {aluno_id} - Último registro: {tipo} "
-              f"às {data_hora}")
-        return tipo == 'entrada'
+        """
+        Check if student is currently in class.
+        Since we removed tipo_registro, always return False.
+        """
+        return False
     
     def create_presenca(
-        self, aluno_id: int, turma_id: int, confianca: float = None,
-        tipo_registro: str = None
+        self, aluno_id: int, turma_id: int, confianca: float = None
     ) -> Dict[str, Any]:
         """
-        Register new attendance with smart entry/exit detection.
-        
-        If tipo_registro is not specified, automatically determines:
-        - If student's last record today is 'entrada', registers 'saida'
-        - Otherwise, registers 'entrada'
+        Register new attendance.
         """
-        # Smart detection if tipo_registro not specified
-        if tipo_registro is None:
-            last_attendance = self.get_student_last_attendance_today(aluno_id)
-            if last_attendance and \
-               last_attendance.get('tipo_registro') == 'entrada':
-                tipo_registro = 'saida'
-                print(f"DEBUG: Registrando SAÍDA para aluno {aluno_id}")
-            else:
-                tipo_registro = 'entrada'
-                print(f"DEBUG: Registrando ENTRADA para aluno {aluno_id}")
-        else:
-            print(f"DEBUG: Tipo já definido: {tipo_registro} "
-                  f"para aluno {aluno_id}")
-        
         presenca_data = {
             "aluno_id": aluno_id,
             "turma_id": turma_id,
-            "confianca": confianca,
-            "tipo_registro": tipo_registro
+            "confianca": confianca
         }
         response = self.client.table('presencas').insert(
             presenca_data

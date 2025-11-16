@@ -19,8 +19,8 @@ from app.services.deepface_service import get_deepface_encoding, recognize_face_
 import time
 
 # Thresholds de confiança para a estratégia híbrida
-HIGH_CONFIDENCE_THRESHOLD = 60.0  # Acima disto, aceita face_recognition diretamente
-LOW_CONFIDENCE_THRESHOLD = 40.0   # Abaixo disto, usa apenas DeepFace
+HIGH_CONFIDENCE_THRESHOLD = 55.0  # Acima disto, aceita face_recognition diretamente
+LOW_CONFIDENCE_THRESHOLD = 35.0   # Abaixo disto, usa apenas DeepFace
 
 # Modo de operação
 HYBRID_MODE = "smart"  # Opções: "smart", "always_both", "fallback"
