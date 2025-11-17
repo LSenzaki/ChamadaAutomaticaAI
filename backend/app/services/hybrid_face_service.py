@@ -19,8 +19,8 @@ from app.services.deepface_service import get_deepface_encoding, recognize_face_
 import time
 
 # Thresholds de confiança para a estratégia híbrida
-HIGH_CONFIDENCE_THRESHOLD = 60.0  # Acima disto, aceita face_recognition diretamente
-LOW_CONFIDENCE_THRESHOLD = 40.0   # Abaixo disto, usa apenas DeepFace
+HIGH_CONFIDENCE_THRESHOLD = 55.0  # Acima disto, aceita face_recognition diretamente
+LOW_CONFIDENCE_THRESHOLD = 35.0   # Abaixo disto, usa apenas DeepFace
 
 # Modo de operação
 HYBRID_MODE = "smart"  # Opções: "smart", "always_both", "fallback"
@@ -29,7 +29,7 @@ class HybridRecognitionResult:
     """Classe para armazenar resultado do reconhecimento híbrido"""
     def __init__(
         self,
-        student_id: Optional[str] = None,
+        aluno_id: Optional[int] = None,
         confidence: Optional[float] = None,
         method_used: Optional[str] = None,
         fr_result: Optional[Tuple] = None,
@@ -37,7 +37,7 @@ class HybridRecognitionResult:
         processing_time: float = 0.0,
         agreement: Optional[bool] = None
     ):
-        self.student_id = student_id
+        self.aluno_id = aluno_id
         self.confidence = confidence
         self.method_used = method_used
         self.fr_result = fr_result  # (id, confidence) from face_recognition
@@ -48,18 +48,18 @@ class HybridRecognitionResult:
     def to_dict(self) -> Dict:
         """Converte resultado para dicionário"""
         return {
-            "student_id": self.student_id,
+            "aluno_id": self.aluno_id,
             "confidence": self.confidence,
             "method_used": self.method_used,
             "processing_time": round(self.processing_time, 3),
             "agreement": self.agreement,
             "details": {
                 "face_recognition": {
-                    "student_id": self.fr_result[0] if self.fr_result else None,
+                    "aluno_id": self.fr_result[0] if self.fr_result else None,
                     "confidence": round(self.fr_result[1], 2) if self.fr_result else None
                 } if self.fr_result else None,
                 "deepface": {
-                    "student_id": self.df_result[0] if self.df_result else None,
+                    "aluno_id": self.df_result[0] if self.df_result else None,
                     "confidence": round(self.df_result[1], 2) if self.df_result else None,
                     "distance": round(self.df_result[2], 4) if self.df_result else None
                 } if self.df_result else None
@@ -108,7 +108,7 @@ def recognize_face_hybrid(
                     # Alta confiança: aceita direto
                     if fr_confidence >= HIGH_CONFIDENCE_THRESHOLD:
                         print(f"✨ Alta confiança ({fr_confidence:.2f}%), aceitando resultado")
-                        result.student_id = fr_id
+                        result.aluno_id = fr_id
                         result.confidence = fr_confidence
                         result.method_used = "face_recognition_only"
                         result.processing_time = time.time() - start_time
@@ -126,7 +126,7 @@ def recognize_face_hybrid(
                             # Ambos concordam?
                             if df_id == fr_id:
                                 print(f"✅ Ambos concordam! ID: {fr_id}")
-                                result.student_id = fr_id
+                                result.aluno_id = fr_id
                                 # Usa média ponderada (face_recognition tem mais peso por ser mais rápido e confiável)
                                 result.confidence = (fr_confidence * 0.6) + (df_confidence * 0.4)
                                 result.method_used = "hybrid_validated"
@@ -135,18 +135,18 @@ def recognize_face_hybrid(
                                 print(f"❌ Divergência! FR: {fr_id} vs DF: {df_id}")
                                 # Usa o de maior confiança
                                 if fr_confidence >= df_confidence:
-                                    result.student_id = fr_id
+                                    result.aluno_id = fr_id
                                     result.confidence = fr_confidence
                                     result.method_used = "face_recognition_priority"
                                 else:
-                                    result.student_id = df_id
+                                    result.aluno_id = df_id
                                     result.confidence = df_confidence
                                     result.method_used = "deepface_priority"
                                 result.agreement = False
                         else:
                             # DeepFace não encontrou, mas face_recognition sim
                             print("⚠️ DeepFace não confirmou, usando face_recognition")
-                            result.student_id = fr_id
+                            result.aluno_id = fr_id
                             result.confidence = fr_confidence * 0.8  # Reduz confiança
                             result.method_used = "face_recognition_unvalidated"
                             result.agreement = False
@@ -159,7 +159,7 @@ def recognize_face_hybrid(
                         
                         if df_result:
                             df_id, df_confidence, df_distance = df_result
-                            result.student_id = df_id
+                            result.aluno_id = df_id
                             result.confidence = df_confidence
                             result.method_used = "deepface_priority"
                             result.agreement = (df_id == fr_id)
@@ -178,29 +178,29 @@ def recognize_face_hybrid(
                         df_id, df_confidence, df_distance = df_result
                         
                         if df_id == fr_id:
-                            result.student_id = fr_id
+                            result.aluno_id = fr_id
                             result.confidence = (fr_confidence + df_confidence) / 2
                             result.method_used = "both_agree"
                             result.agreement = True
                         else:
                             # Usa o de maior confiança
                             if fr_confidence >= df_confidence:
-                                result.student_id = fr_id
+                                result.aluno_id = fr_id
                                 result.confidence = fr_confidence
                                 result.method_used = "face_recognition_priority"
                             else:
-                                result.student_id = df_id
+                                result.aluno_id = df_id
                                 result.confidence = df_confidence
                                 result.method_used = "deepface_priority"
                             result.agreement = False
                     else:
-                        result.student_id = fr_id
+                        result.aluno_id = fr_id
                         result.confidence = fr_confidence
                         result.method_used = "face_recognition_only"
                 
                 # MODO 3: FALLBACK - Só usa DeepFace se face_recognition falhar
                 elif mode == "fallback":
-                    result.student_id = fr_id
+                    result.aluno_id = fr_id
                     result.confidence = fr_confidence
                     result.method_used = "face_recognition_only"
             
@@ -215,7 +215,7 @@ def recognize_face_hybrid(
                     
                     if df_result:
                         df_id, df_confidence, df_distance = df_result
-                        result.student_id = df_id
+                        result.aluno_id = df_id
                         result.confidence = df_confidence
                         result.method_used = "deepface_fallback"
                     else:
@@ -229,7 +229,7 @@ def recognize_face_hybrid(
             
             if df_result:
                 df_id, df_confidence, df_distance = df_result
-                result.student_id = df_id
+                result.aluno_id = df_id
                 result.confidence = df_confidence
                 result.method_used = "deepface_only"
     

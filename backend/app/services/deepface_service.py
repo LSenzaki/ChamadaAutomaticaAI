@@ -13,6 +13,7 @@ from deepface import DeepFace
 import json
 import tempfile
 import os
+from app.services.face_service import preprocess_image
 
 # Configurações do DeepFace
 DEEPFACE_MODEL = "Facenet512"  # Opções: VGG-Face, Facenet, Facenet512, OpenFace, DeepFace, DeepID, ArcFace, Dlib, SFace
@@ -33,9 +34,10 @@ DEEPFACE_THRESHOLDS = {
 }
 
 def get_deepface_encoding(
-    file: UploadFile, 
+    file: UploadFile,
     model_name: str = DEEPFACE_MODEL,
-    detector_backend: str = DEEPFACE_DETECTOR
+    detector_backend: str = DEEPFACE_DETECTOR,
+    preprocess: bool = True
 ) -> Optional[np.ndarray]:
     """
     Extrai o embedding facial usando DeepFace.
@@ -44,6 +46,7 @@ def get_deepface_encoding(
         file: Arquivo de imagem enviado
         model_name: Modelo de reconhecimento facial a ser usado
         detector_backend: Backend de detecção de faces
+        preprocess: Se True, redimensiona para 300x300px (padrão: True)
     
     Returns:
         Array numpy com o embedding ou None se nenhum rosto for detectado
@@ -52,11 +55,17 @@ def get_deepface_encoding(
         # Ler bytes da imagem
         image_bytes = file.file.read()
         
+        # Preprocessar imagem se solicitado
+        if preprocess:
+            image_bytes = preprocess_image(image_bytes)
+        
         # Converter para PIL Image
         image = Image.open(io.BytesIO(image_bytes))
         
         # Salvar temporariamente (DeepFace trabalha melhor com arquivos)
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix='.jpg'
+        ) as tmp_file:
             image.save(tmp_file.name)
             tmp_path = tmp_file.name
         
@@ -122,18 +131,18 @@ def recognize_face_deepface(
     known_faces_data: List[Dict[str, any]],
     model_name: str = DEEPFACE_MODEL,
     distance_metric: str = DEEPFACE_DISTANCE_METRIC
-) -> Optional[Tuple[str, float, float]]:
+) -> Optional[Tuple[int, float, float]]:
     """
     Compara o embedding de um rosto desconhecido com todos os rostos conhecidos usando DeepFace.
     
     Args:
         unknown_encoding: O embedding do rosto a ser identificado
-        known_faces_data: Lista de dicionários com 'student_id' e 'vector'
+        known_faces_data: Lista de dicionários com 'aluno_id' e 'embedding'
         model_name: Modelo usado (para determinar threshold)
         distance_metric: Métrica de distância
     
     Returns:
-        Tupla (student_id, confidence, distance) do melhor match, ou None
+        Tupla (aluno_id, confidence, distance) do melhor match, ou None
     """
     if not known_faces_data:
         return None
@@ -142,18 +151,47 @@ def recognize_face_deepface(
     known_encodings = []
     known_ids = []
     
+    import pickle
+    import base64
+    
     for face_record in known_faces_data:
         try:
-            vector_list = face_record['vector']
-            if isinstance(vector_list, str):
-                import json
-                vector_list = json.loads(vector_list)
+            # Desserializar o embedding de bytes pickle para numpy array
+            embedding_data = face_record['embedding']
             
-            known_encodings.append(np.array(vector_list))
-            known_ids.append(face_record['student_id'])
+            # Check if it's a hex-encoded string from Supabase BYTEA
+            if isinstance(embedding_data, str) and embedding_data.startswith('\\x'):
+                # Remove \x prefix and decode hex to get original base64
+                hex_str = embedding_data.replace('\\x', '')
+                embedding_bytes = bytes.fromhex(hex_str)
+                # The result is the base64 string as bytes, decode to str
+                embedding_b64_str = embedding_bytes.decode('utf-8')
+                # Now decode base64 to get pickle bytes
+                pickle_bytes = base64.b64decode(embedding_b64_str)
+                # Finally unpickle to numpy array
+                embedding_array = pickle.loads(pickle_bytes)
+            elif isinstance(embedding_data, str):
+                # Decode base64 string to bytes first
+                embedding_bytes = base64.b64decode(embedding_data)
+                # Then unpickle to numpy array
+                embedding_array = pickle.loads(embedding_bytes)
+            elif isinstance(embedding_data, bytes):
+                # Direct pickle deserialização
+                embedding_array = pickle.loads(embedding_data)
+            elif isinstance(embedding_data, memoryview):
+                # Se vier como memoryview, converter para bytes primeiro
+                embedding_array = pickle.loads(bytes(embedding_data))
+            else:
+                # Fallback: tentar converter diretamente
+                embedding_array = np.array(embedding_data)
+            
+            known_encodings.append(embedding_array)
+            known_ids.append(face_record['aluno_id'])
             
         except Exception as e:
-            print(f"Erro ao processar vetor facial do ID {face_record.get('student_id')}: {e}")
+            print(f"Erro ao processar embedding do aluno ID "
+                  f"{face_record.get('aluno_id')}: {e}")
+            print(f"Tipo do embedding: {type(face_record.get('embedding'))}")
             continue
     
     if not known_encodings:

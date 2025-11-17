@@ -1,0 +1,79 @@
+site_name: Sistema de Reconhecimento Facial - Documentação
+site_description: Sistema de controle de presença com reconhecimento facial
+site_author: Sistema Integrador
+theme:
+  name: material
+  language: pt-BR
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Modo escuro
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search:
+      lang: pt
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - tables
+
+nav:
+  - Início: index.md
+  - Visão Geral:
+      - Introdução: visao-geral/introducao.md
+      - Arquitetura: visao-geral/arquitetura.md
+      - Tecnologias: visao-geral/tecnologias.md
+  - Instalação:
+      - Requisitos: instalacao/requisitos.md
+      - Backend: instalacao/backend.md
+      - Frontend: instalacao/frontend.md
+      - Banco de Dados: instalacao/banco-de-dados.md
+  - Funcionalidades:
+      - Reconhecimento Facial: funcionalidades/reconhecimento.md
+      - Gestão de Alunos: funcionalidades/alunos.md
+      - Gestão de Professores: funcionalidades/professores.md
+      - Gestão de Turmas: funcionalidades/turmas.md
+      - Validação de Presenças: funcionalidades/presencas.md
+  - API:
+      - Endpoints: api/endpoints.md
+      - Alunos: api/alunos.md
+      - Professores: api/professores.md
+      - Turmas: api/turmas.md
+      - Presenças: api/presencas.md
+  - Guias:
+      - Teste de Reconhecimento: guias/teste-reconhecimento.md
+      - Pré-processamento de Imagens: guias/IMAGE_PREPROCESSING.md
+      - Sistema Híbrido: guias/sistema-hibrido.md
+      - Guia de Testes: guias/TESTING_GUIDE.md
+  - Referência:
+      - Configurações: referencia/configuracoes.md
+      - Troubleshooting: referencia/troubleshooting.md
+      - Setup do Banco: DATABASE_SETUP.md
+      - Sistema Híbrido: HYBRID_SYSTEM.md
+      - Guia de Migração: MIGRATION_GUIDE.md
+      - Status de Integração: INTEGRATION_STATUS.md
+      - Sumário do Projeto: SUMMARY.md
