@@ -32,27 +32,27 @@ O sistema agora utiliza uma **estratégia híbrida inteligente** que combina o m
 
 ---
 
-## 📊 Face Recognition vs DeepFace Comparison
+## 📊 Comparação Face Recognition vs DeepFace
 
-A comprehensive comparison was conducted between **face_recognition** and **DeepFace** libraries.
+Foi realizada uma comparação abrangente entre as bibliotecas **face_recognition** e **DeepFace**.
 
-### 🏆 Winner: Face Recognition
-- **Accuracy: 77.6%** vs DeepFace 54.1%
+### 🏆 Vencedor: Face Recognition
+- **Precisão: 77.6%** vs DeepFace 54.1%
 - **F1 Score: 0.813** vs DeepFace 0.477
-- **Speed: ~0.09s** vs DeepFace ~1.7s
-- Better balance between precision and recall
+- **Velocidade: ~0.09s** vs DeepFace ~1.7s
+- Melhor equilíbrio entre precisão e recall
 
-**📂 Comparison Structure:**
-- **[📑 Index & Navigation](tests/comparison_results/INDEX.md)** - Start here!
-- **[📖 Full Documentation](tests/comparison_results/README.md)** - Complete analysis (30+ pages)
-- **[🚀 Quick Start Guide](tests/comparison_results/QUICKSTART.md)** - Reproduce the test
-- **[📊 Graphics](tests/comparison_results/graphics/)** - 6 professional visualizations
-- **[💾 Results Data](tests/comparison_results/data/test_results.json)** - Structured JSON
+**📂 Estrutura da Comparação:**
+- **[📑 Índice & Navegação](tests/comparison_results/INDEX.md)** - Comece por aqui!
+- **[📖 Documentação Completa](tests/comparison_results/README.md)** - Análise completa (30+ páginas)
+- **[🚀 Guia de Início Rápido](tests/comparison_results/QUICKSTART.md)** - Reproduza o teste
+- **[📊 Gráficos](tests/comparison_results/graphics/)** - 6 visualizações profissionais
+- **[💾 Dados dos Resultados](tests/comparison_results/data/test_results.json)** - JSON estruturado
 
-**Test Details:**
-- 429 images tested (30 known + 15 unknown celebrities)
-- Face Recognition: 77.6% accuracy, 208 correct identifications
-- DeepFace: 54.1% accuracy, 90 correct identifications (missed 68.5% of known faces)
+**Detalhes do Teste:**
+- 429 imagens testadas (30 celebridades conhecidas + 15 desconhecidas)
+- Face Recognition: 77.6% de precisão, 208 identificações corretas
+- DeepFace: 54.1% de precisão, 90 identificações corretas (perdeu 68.5% dos rostos conhecidos)
 
 ---
 

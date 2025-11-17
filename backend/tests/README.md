@@ -1,46 +1,46 @@
-# Tests - Face Recognition vs DeepFace Comparison
+# Testes - Comparação Face Recognition vs DeepFace
 
-This folder contains all comparison-related files, datasets, and results.
+Esta pasta contém todos os arquivos relacionados à comparação, datasets e resultados.
 
-## 📂 Structure
+## 📂 Estrutura
 
 ```
 tests/
-├── 📊 comparison_results/          # Complete comparison documentation & results
-│   ├── INDEX.md                    # Navigation guide (START HERE!)
-│   ├── README.md                   # Full documentation (30+ pages)
-│   ├── QUICKSTART.md               # Step-by-step reproduction guide
-│   ├── STRUCTURE.md                # Project structure overview
-│   ├── graphics/                   # 6 professional visualizations (PNG, 300 DPI)
-│   └── data/                       # Structured JSON results
+├── 📊 comparison_results/          # Documentação completa e resultados da comparação
+│   ├── INDEX.md                    # Guia de navegação (COMECE AQUI!)
+│   ├── README.md                   # Documentação completa (30+ páginas)
+│   ├── QUICKSTART.md               # Guia passo a passo de reprodução
+│   ├── STRUCTURE.md                # Visão geral da estrutura do projeto
+│   ├── graphics/                   # 6 visualizações profissionais (PNG, 300 DPI)
+│   └── data/                       # Resultados JSON estruturados
 │
-├── 🧪 Test Scripts
-│   ├── test_celebrity_blind.py     # Main comparison test
-│   ├── generate_comparison_graphics.py  # Graphics generator
-│   └── resize_celebrity_dataset.py # Image preprocessing utility
+├── 🧪 Scripts de Teste
+│   ├── test_celebrity_blind.py     # Teste principal de comparação
+│   ├── generate_comparison_graphics.py  # Gerador de gráficos
+│   └── resize_celebrity_dataset.py # Utilitário de pré-processamento de imagens
 │
 └── 📁 Datasets
-    ├── test_dataset/               # Training data (30 celebrities)
-    └── celebrity_dataset/          # Testing data (429 images, 45 celebrities)
+    ├── test_dataset/               # Dados de treinamento (30 celebridades)
+    └── celebrity_dataset/          # Dados de teste (429 imagens, 45 celebridades)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Início Rápido
 
-### 1. View Results
+### 1. Visualizar Resultados
 ```powershell
-# Read documentation
+# Ler documentação
 comparison_results/INDEX.md
 ```
 
-### 2. Run Comparison Test
+### 2. Executar Teste de Comparação
 ```powershell
 cd tests
 python test_celebrity_blind.py test_dataset celebrity_dataset
 ```
 
-### 3. Generate Graphics
+### 3. Gerar Gráficos
 ```powershell
 cd tests
 python generate_comparison_graphics.py
@@ -48,42 +48,42 @@ python generate_comparison_graphics.py
 
 ---
 
-## 📊 Results Summary
+## 📊 Resumo dos Resultados
 
-**Winner:** Face Recognition 🏆
+**Vencedor:** Face Recognition 🏆
 
-| Metric | Face Recognition | DeepFace | 
+| Métrica | Face Recognition | DeepFace | 
 |--------|------------------|----------|
-| Accuracy | **77.6%** | 54.1% |
+| Precisão | **77.6%** | 54.1% |
 | F1 Score | **0.813** | 0.477 |
 | Recall | **72.7%** | 31.5% |
 
-**Full documentation:** [comparison_results/README.md](comparison_results/README.md)
+**Documentação completa:** [comparison_results/README.md](comparison_results/README.md)
 
 ---
 
-## 📝 Files Description
+## 📝 Descrição dos Arquivos
 
-### Test Scripts
-- **test_celebrity_blind.py**: Blind recognition test with known/unknown celebrities
-- **generate_comparison_graphics.py**: Creates 6 professional comparison charts
-- **resize_celebrity_dataset.py**: Preprocesses images to 300×300 pixels
+### Scripts de Teste
+- **test_celebrity_blind.py**: Teste de reconhecimento cego com celebridades conhecidas/desconhecidas
+- **generate_comparison_graphics.py**: Cria 6 gráficos profissionais de comparação
+- **resize_celebrity_dataset.py**: Pré-processa imagens para 300×300 pixels
 
 ### Datasets
-- **test_dataset/**: 30 known celebrities for training (1-3 photos each)
-- **celebrity_dataset/**: 45 celebrities for testing (30 known + 15 unknown, ~10 photos each)
+- **test_dataset/**: 30 celebridades conhecidas para treinamento (1-3 fotos cada)
+- **celebrity_dataset/**: 45 celebridades para teste (30 conhecidas + 15 desconhecidas, ~10 fotos cada)
 
-### Results
-- **comparison_results/**: Complete documentation, graphics, and structured data
-  - All markdown documentation
-  - 6 PNG graphics (300 DPI)
-  - JSON results file
+### Resultados
+- **comparison_results/**: Documentação completa, gráficos e dados estruturados
+  - Toda documentação em markdown
+  - 6 gráficos PNG (300 DPI)
+  - Arquivo JSON de resultados
 
 ---
 
-## ⚙️ Requirements
+## ⚙️ Requisitos
 
-All requirements are in `../requirements.txt`:
+Todos os requisitos estão em `../requirements.txt`:
 - face-recognition==1.3.0
 - deepface==0.0.95
 - tensorflow==2.20.0
@@ -94,32 +94,32 @@ All requirements are in `../requirements.txt`:
 
 ---
 
-## 🎯 Use Cases
+## 🎯 Casos de Uso
 
-### Reproduce the Test
-1. Ensure datasets are in place (`test_dataset/` and `celebrity_dataset/`)
-2. Run: `python test_celebrity_blind.py test_dataset celebrity_dataset`
-3. View results in terminal and `comparison_results/`
+### Reproduzir o Teste
+1. Certifique-se de que os datasets estão no lugar (`test_dataset/` e `celebrity_dataset/`)
+2. Execute: `python test_celebrity_blind.py test_dataset celebrity_dataset`
+3. Visualize os resultados no terminal e em `comparison_results/`
 
-### Create Your Own Test
-1. Prepare training dataset (known faces)
-2. Prepare test dataset (mix of known + unknown faces)
-3. Run: `python test_celebrity_blind.py your_train your_test`
+### Criar Seu Próprio Teste
+1. Prepare o dataset de treinamento (rostos conhecidos)
+2. Prepare o dataset de teste (mix de conhecidos + desconhecidos)
+3. Execute: `python test_celebrity_blind.py seu_treino seu_teste`
 
-### Generate Graphics Only
-1. Run: `python generate_comparison_graphics.py`
-2. Graphics saved in `comparison_results/graphics/`
-
----
-
-## 📚 Documentation
-
-**Start here:** [comparison_results/INDEX.md](comparison_results/INDEX.md)
-
-**Full analysis:** [comparison_results/README.md](comparison_results/README.md)
-
-**Quick guide:** [comparison_results/QUICKSTART.md](comparison_results/QUICKSTART.md)
+### Gerar Apenas Gráficos
+1. Execute: `python generate_comparison_graphics.py`
+2. Gráficos salvos em `comparison_results/graphics/`
 
 ---
 
-**This folder contains everything needed for the Face Recognition vs DeepFace comparison!**
+## 📚 Documentação
+
+**Comece aqui:** [comparison_results/INDEX.md](comparison_results/INDEX.md)
+
+**Análise completa:** [comparison_results/README.md](comparison_results/README.md)
+
+**Guia rápido:** [comparison_results/QUICKSTART.md](comparison_results/QUICKSTART.md)
+
+---
+
+**Esta pasta contém tudo o que é necessário para a comparação Face Recognition vs DeepFace!**
