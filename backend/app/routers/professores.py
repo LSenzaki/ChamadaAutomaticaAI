@@ -36,7 +36,15 @@ class ProfessorResponse(BaseModel):
 
 @router.get("/", response_model=List[Dict[str, Any]])
 def list_professores(db: SupabaseDB = Depends(get_db_manager)):
-    """List all professors"""
+    """
+    Lista todos os professores cadastrados no sistema.
+    
+    Args:
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Lista de professores com seus dados completos
+    """
     return db.list_professores()
 
 
@@ -45,7 +53,16 @@ def create_professor(
     professor: ProfessorCreate,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Create a new professor and assign classes"""
+    """
+    Cria um novo professor e atribui turmas a ele.
+    
+    Args:
+        professor: Dados do professor incluindo nome, email e IDs das turmas
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados do professor criado com ID gerado
+    """
     return db.create_professor(
         nome=professor.nome,
         email=professor.email,
@@ -59,7 +76,17 @@ def update_professor(
     professor: ProfessorUpdate,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Update a professor and their assigned classes"""
+    """
+    Atualiza os dados de um professor e suas turmas atribuídas.
+    
+    Args:
+        professor_id: ID do professor a ser atualizado
+        professor: Dados a serem atualizados (campos opcionais)
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados atualizados do professor
+    """
     return db.update_professor(
         professor_id=professor_id,
         nome=professor.nome,
@@ -74,7 +101,19 @@ def delete_professor(
     professor_id: int,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Delete a professor by ID"""
+    """
+    Remove um professor do sistema pelo ID.
+    
+    Args:
+        professor_id: ID do professor a ser removido
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Mensagem de confirmação da remoção
+        
+    Raises:
+        HTTPException: 404 se o professor não for encontrado
+    """
     success = db.delete_professor(professor_id)
     if not success:
         raise HTTPException(status_code=404, detail="Professor not found")

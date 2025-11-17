@@ -39,7 +39,16 @@ class PresencaResponse(BaseModel):
 def get_presencas_hoje(
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Get all attendance records for today"""
+    """
+    Busca todos os registros de presença do dia atual.
+    Enriquece os dados com informações de aluno, turma e professor.
+    
+    Args:
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dict contendo data, lista de presenças e total de registros
+    """
     from datetime import date
     today = date.today().isoformat()
     
@@ -88,7 +97,18 @@ def list_presencas(
     turma_id: Optional[int] = Query(None, description="Filter by class ID"),
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """List attendance records with optional filters"""
+    """
+    Lista registros de presença com filtros opcionais.
+    
+    Args:
+        data_inicio: Data inicial para filtro (formato ISO)
+        data_fim: Data final para filtro (formato ISO)
+        turma_id: ID da turma para filtrar
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Lista de registros de presença filtrados
+    """
     return db.list_presencas(
         data_inicio=data_inicio,
         data_fim=data_fim,
@@ -101,7 +121,19 @@ def get_presenca(
     presenca_id: int,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Get an attendance record by ID"""
+    """
+    Busca um registro de presença específico pelo ID.
+    
+    Args:
+        presenca_id: ID do registro de presença
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados completos do registro de presença
+        
+    Raises:
+        HTTPException: 404 se o registro não for encontrado
+    """
     presenca = db.get_presenca_by_id(presenca_id)
     if not presenca:
         raise HTTPException(
@@ -115,7 +147,16 @@ def create_presenca(
     presenca: PresencaCreate,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Register new attendance"""
+    """
+    Registra uma nova presença no sistema.
+    
+    Args:
+        presenca: Dados da presença incluindo aluno_id, turma_id e confiança
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados do registro de presença criado
+    """
     return db.create_presenca(
         aluno_id=presenca.aluno_id,
         turma_id=presenca.turma_id,
@@ -129,7 +170,20 @@ def validate_presenca(
     validation: PresencaValidate,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Validate attendance by professor"""
+    """
+    Valida uma presença através de confirmação do professor.
+    
+    Args:
+        presenca_id: ID do registro de presença a ser validado
+        validation: Dados de validação (professor_id e observação)
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Mensagem de confirmação da validação
+        
+    Raises:
+        HTTPException: 404 se o registro não for encontrado
+    """
     success = db.validate_presenca(
         presenca_id=presenca_id,
         professor_id=validation.professor_id,

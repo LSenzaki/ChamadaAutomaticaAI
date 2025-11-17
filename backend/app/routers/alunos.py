@@ -44,7 +44,16 @@ def list_alunos(
     turma_id: Optional[int] = Query(None, description="Filter by class ID"),
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """List all students, optionally filtered by class"""
+    """
+    Lista todos os alunos, opcionalmente filtrados por turma.
+    
+    Args:
+        turma_id: ID da turma para filtrar (opcional)
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Lista de alunos com seus dados completos
+    """
     return db.list_alunos(turma_id=turma_id)
 
 
@@ -53,7 +62,19 @@ def get_aluno(
     aluno_id: int,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Get a student by ID"""
+    """
+    Busca um aluno específico pelo ID.
+    
+    Args:
+        aluno_id: ID do aluno
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados completos do aluno
+        
+    Raises:
+        HTTPException: 404 se o aluno não for encontrado
+    """
     aluno = db.get_aluno_by_id(aluno_id)
     if not aluno:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -65,7 +86,16 @@ def create_aluno(
     aluno: AlunoCreate,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Create a new student"""
+    """
+    Cria um novo aluno no sistema.
+    
+    Args:
+        aluno: Dados do aluno a ser criado
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados do aluno criado com ID gerado
+    """
     return db.create_aluno(
         nome=aluno.nome,
         turma_id=aluno.turma_id,
@@ -100,7 +130,19 @@ def delete_aluno(
     aluno_id: int,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Delete a student by ID"""
+    """
+    Remove um aluno do sistema.
+    
+    Args:
+        aluno_id: ID do aluno a ser removido
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Mensagem de confirmação da remoção
+        
+    Raises:
+        HTTPException: 404 se o aluno não for encontrado
+    """
     success = db.delete_aluno(aluno_id)
     if not success:
         raise HTTPException(status_code=404, detail="Student not found")

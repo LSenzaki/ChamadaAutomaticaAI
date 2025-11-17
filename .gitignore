@@ -7,6 +7,13 @@ __pycache__/
 *.pyd
 *.pycache/
 *.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv/
@@ -14,6 +21,22 @@ __pycache__/
 env/
 venv/
 ENV/
+
+# ==========================
+# Node.js / Frontend
+# ==========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+package-lock.json
+yarn.lock
+
+# Build outputs
+frontend/build/
+frontend/dist/
 
 # ==========================
 # Editor / IDE
@@ -24,22 +47,35 @@ ENV/
 *.sublime-project
 *.swp
 *.swo
+*.code-workspace
 
 # ==========================
 # Logs
 # ==========================
 *.log
+logs/
 
 # ==========================
 # Database
 # ==========================
 *.db
 *.sqlite3
+*.sql~
+
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.local
+.env.*.local
+.envrc
 
 # ==========================
 # MacOS
 # ==========================
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # ==========================
 # Windows
@@ -47,6 +83,7 @@ ENV/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
 
 # ==========================
 # PyCharm
@@ -55,4 +92,30 @@ Desktop.ini
 *.ipr
 *.iws
 
-.env
+# ==========================
+# Testing
+# ==========================
+coverage/
+.nyc_output/
+test-results/
+
+# ==========================
+# Documentation
+# ==========================
+site/
+.mkdocs_cache/
+
+# ==========================
+# Temporary files
+# ==========================
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# ==========================
+# Application specific
+# ==========================
+data/known_faces/
+data/unknown_faces/
+backend/migrations/__pycache__/

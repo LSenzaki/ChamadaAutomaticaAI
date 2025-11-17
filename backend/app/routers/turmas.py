@@ -25,7 +25,15 @@ class TurmaResponse(BaseModel):
 
 @router.get("/", response_model=List[Dict[str, Any]])
 def list_turmas(db: SupabaseDB = Depends(get_db_manager)):
-    """List all classes"""
+    """
+    Lista todas as turmas cadastradas no sistema.
+    
+    Args:
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Lista de turmas com seus dados completos
+    """
     return db.list_turmas()
 
 
@@ -34,7 +42,16 @@ def create_turma(
     turma: TurmaCreate,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Create a new class"""
+    """
+    Cria uma nova turma no sistema.
+    
+    Args:
+        turma: Dados da turma incluindo nome
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Dados da turma criada com ID gerado
+    """
     return db.create_turma(nome=turma.nome)
 
 
@@ -43,7 +60,19 @@ def delete_turma(
     turma_id: int,
     db: SupabaseDB = Depends(get_db_manager)
 ):
-    """Delete a class by ID"""
+    """
+    Remove uma turma do sistema pelo ID.
+    
+    Args:
+        turma_id: ID da turma a ser removida
+        db: Gerenciador de banco de dados injetado
+        
+    Returns:
+        Mensagem de confirmação da remoção
+        
+    Raises:
+        HTTPException: 404 se a turma não for encontrada
+    """
     success = db.delete_turma(turma_id)
     if not success:
         raise HTTPException(status_code=404, detail="Class not found")

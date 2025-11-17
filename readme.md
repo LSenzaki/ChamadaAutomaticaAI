@@ -1,11 +1,19 @@
-PROJETO DE RECONHECIMENTO FACIAL DOS ALUNOS DO BIOPARK
+# Sistema de Reconhecimento Facial para Chamada Acadêmica
 
-OBJETIVO
-O objetivo é conseguir integrar um sistema automático de reconhecimento dos alunos com o sistema usado pelos professores para automatizar o 
-registro de presença dos alunos.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://reactjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 
-BIBLIOTECAS
-**Sistema Híbrido**: face_recognition + DeepFace
+Sistema inteligente de controle de presença acadêmica utilizando reconhecimento facial híbrido (face_recognition + DeepFace) com interface web moderna e API RESTful.
+
+## 🎯 Objetivo
+
+Automatizar o registro de presença dos alunos através de reconhecimento facial em tempo real, integrando com o sistema de gestão acadêmica usado pelos professores.
+
+## 🔬 Tecnologias
+
+**Sistema Híbrido**: face_recognition + DeepFace  
 (Combina velocidade do face_recognition com precisão de validação do DeepFace)
 
 ---
@@ -54,42 +62,79 @@ A comprehensive comparison was conducted between **face_recognition** and **Deep
 - Face Recognition: 77.6% accuracy, 208 correct identifications
 - DeepFace: 54.1% accuracy, 90 correct identifications (missed 68.5% of known faces)
 
+
 ---
 
-ESTRUTURA DO PROJETO
+## 📁 Estrutura do Projeto
 
-project_root/app/                        # Código principal da aplicação FastAPI
-project_root/app/main.py                 # Ponto de entrada da aplicação
+```
+Integrador/
+├── backend/                      # API FastAPI
+│   ├── app/
+│   │   ├── main.py              # Entry point
+│   │   ├── config.py            # Configurações
+│   │   ├── models/              # Modelos do banco (SQLAlchemy)
+│   │   ├── routers/             # Endpoints REST (alunos, professores, turmas, presencas)
+│   │   ├── schemas/             # Pydantic schemas para validação
+│   │   └── services/            # Lógica de negócio
+│   │       ├── face_service.py           # Face Recognition
+│   │       ├── deepface_service.py       # DeepFace
+│   │       ├── hybrid_face_service.py    # Sistema Híbrido
+│   │       └── db_service.py             # Database operations
+│   ├── scripts/                 # Utilitários
+│   ├── tests/                   # Testes e datasets
+│   └── requirements.txt
+│
+├── frontend/                    # App React
+│   ├── src/
+│   │   ├── components/          # Componentes organizados por papel (student, professor, admin)
+│   │   ├── pages/               # Páginas principais
+│   │   ├── hooks/               # Custom hooks (useWebcam)
+│   │   ├── utils/               # Helpers e funções auxiliares
+│   │   └── constants/           # Configurações e constantes da API
+│   └── package.json
+│
+├── docs/                        # Documentação MkDocs
+└── README.md                    # Este arquivo
+```
 
-project_root/app/routers/                     # Endpoints da API
-project_root/app/routers/__init__.py     
-project_root/app/routers/faces.py             # Rotas de reconhecimento facial
-project_root/app/routers/students.py          # Rotas CRUD de estudantes e registros
+## 💻 Requisitos
 
-project_root/app/services/                    # Regras de negócio
-project_root/app/services/__init__.py
-project_root/app/services/hybrid_face_service.py  # 🆕 Sistema híbrido FR + DF
-project_root/app/services/face_service.py     # Funções que utilizam face_recognition
-project_root/app/services/deepface_service.py # 🆕 Funções que utilizam DeepFace
-project_root/app/services/db_service.py       # Operações com o banco de dados
+- **Python**: 3.9+
+- **Node.js**: 16.0+
+- **PostgreSQL**: 13+ (Supabase recomendado)
+- **Webcam**: Resolução mínima de 640x480
 
-project_root/app/models/                      # Modelos do banco de dados
-project_root/app/models/db_models.py          # Modelos SQLAlchemy
+## 🚀 Instalação Rápida
 
-project_root/app/schemas/                     # Modelos de validação (Pydantic)
-project_root/app/schemas/pydantic_schemas.py  # Schemas para entrada/saída da API
+### Backend
 
-project_root/data/                            # Armazenamento de imagens
+```bash
+cd backend
+python3 -m venv ../.venv
+source ../.venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env  # Configure suas credenciais
+uvicorn app.main:app --reload --port 8000
+```
 
-project_root/data/known_faces/                # Fotos conhecidas (para encoding)
-project_root/data/unknown_faces/              # Fotos capturadas via webcam
+### Frontend
 
-project_root/requirements.txt                 # Dependências do projeto
-project_root/Dockerfile                       # Arquivo para containerização (opcional)
-project_root/README.md                        # Documentação do projeto
+```bash
+cd frontend
+npm install
+npm start
+```
 
-PROBLEMAS
-1 - Instalação da biblioteca em windows e Mac:
-31/08/25 - Conseguimos fazer funcionar no windows a biblioteca.
+### Documentação
 
-CONCLUSÃO
+```bash
+source .venv/bin/activate
+mkdocs serve --dev-addr=127.0.0.1:8001
+```
+
+Acesse:
+- **Backend**: http://localhost:8000 (Docs em /docs)
+- **Frontend**: http://localhost:3000
+- **Documentação**: http://localhost:8001
+
